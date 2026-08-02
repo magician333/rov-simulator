@@ -1,0 +1,96 @@
+# Development Log — ROV Simulator
+
+Chronological record of the project, milestones and key decisions. Useful for onboarding humans/AI and for auditing why things are the way they are.
+
+## M1 — Project skeleton & core loop
+
+- **Stack**: Three.js + React 18 + TypeScript + Zustand (persist) + Vite; `index.html` sets a global sans-serif font stack and dark `color-scheme` for `<select>/<option>`.
+- **Physics core**: `RigidBody6` (6-DOF, Euler YXZ, `-Y` = down), fixed 1/120 s step with accumulator (clamp 0.1 s + `MAX_ACCUMULATE_STEPS`), semi-implicit Euler, quaternion normalization every step.
+- **World**: height-field seabed (`fbm` noise), water surface, sky, underwater particles/light shafts.
+- **Views**: chase camera, POV camera, 2D fan sonar (multi-beam raycasts + image synthesis).
+- **Scenes & vehicles & tasks**: registry-driven (scene/rov/task), 4 scenes, 1 vehicle, mission system with records + JSON export.
+
+## M2 — World-frame semantics fix
+
+- "Forward" in world mode redefined as the **horizontal projection of the vehicle nose** (from yaw, ignoring pitch/roll); speed limiting uses projected velocity. Verified: after 88° yaw, forward input moves +x (east).
+- Control frame toggle body/world (`G`).
+
+## M3 — Static water default, arm mount, fine grabbing
+
+- Default turbulence 0; all 4 base scenes have zero baseline current (local eddies kept).
+- Manipulator arm mounts **per scene** (`ROVVisual.setArmVisible`, only on `salvage`); generated model includes hydraulic arm group.
+- Fine grab system: mouse-wheel mode switch (camera / gripper), arm reach 0.9 m, `gripSize ≤ opening (0.45 × open)`, per-prop grip sizes (phone 0.08 / dummy 0.2 / suitcase 0.3 / container 2.4), status bar opening %, i18n failure hints (`grab_too_far` / `grab_gap`), `handleRestart` clears `grabbedRef`.
+
+## M4 — Gamepad & settings
+
+- Xbox full mapping: left stick fwd/back + turn, right stick strafe + heave; LB/RB pitch, LT/RT roll; A = hold action; B = lights; X tap view / hold HUD; Y tap level / hold frame; Start = menu; Back tap sonar / hold HUD. Menu navigation with trigger edges + repeat throttle (left/right 130 ms) + LB/RB tab switch.
+- Gamepad sensitivity presets: low 0.5 / medium 0.75 / high 1.0.
+- In-session **SettingsMenu** (modal, tabs: display (sonar first) / environment / controls / misc), keyboard + gamepad navigable. Top bar now display-only + ⚙ + ❓; main menu has language switch.
+
+## M5 — POV HUD redesign
+
+- Two layouts: `corner` (large attitude box + depth/temp/pitch/roll + speed grid + compass disk) and `hud` (rolling compass strip with world-sampled cardinals, depth scale top=0, pitch scale, 120° roll arc, outer range rings, frameless info bar).
+- All elements avoid the top bar (top ≥ 62) and status bar (bottom ≥ 56).
+- DME contact shows 0 m (ray-march starts at t=0.05).
+
+## M6 — Units, i18n, persistence, M2 vehicle, 4 new scenes
+
+- Units m↔ft, °C↔℉ (knots unchanged); trilingual UI (zh/en/es) covering menus/HUD/settings/tasks/records/grab hints.
+- Zustand persist **version 4** (compassStyle not persisted); training session snapshots every 3 s (pose/elapsed) restored via `SimulationEngine.teleport`.
+- **CHASING M2**: compact 0.72×0.48×0.4 m, 30 kg, 8 thrusters (4 front / 4 rear, all-vector 3D oblique), 6-DOF independent control verified; max speeds 3 kn fwd / 1.5 kn sway / 1.5 kn heave; angular damping consistent with generic; micro-positive buoyancy 0.3%.
+- **4 new scenes**: oilrig / pipeline_ext / pipeline_int (4-wall collision) / aquaculture (net mesh + damaged target). All 8 scenes spawn at y=-1.2.
+- Sky/surface separation (bright sky 0xdcefff + sun + clouds; water 0x5fb8d8 α0.55); water ripple (400×400, 64×64 verts, dual-sine animation + normal recompute; disabled on low graphics).
+
+## M7 — Sonar performance & stability fixes
+
+- Ray-march target set = scene props only; water/sky/sun/clouds/seaweed excluded from sonar.
+- DME "up" resolves surface distance `max(0.04 - origin.y, 0)`.
+- Sonar interval 100 ms → 120 ms floor; `SonarView` validates engine scene reference and rebuilds `SonarSampler` on scene change.
+- Noise slider inverted mapping (1 - noise) — **later reverted** (see M12).
+
+## M8 — DVL & environment models
+
+- **DVL** (Doppler velocity log): PD anchor hold + velocity damping; current ×0.3. Verified hold: drift 0.031 m vs 1.31 m without DVL at 0.5 m/s current. Status bar indicator; enable in Settings → Controls.
+- **Environment model** three modes: sea / river / custom. `EnvironmentState` adds `envModel/seaState/riverKnots` + `SEA_STATES` + `recomputeFlow` (sea/river derive speed/turbulence; custom keeps sliders). Per-scene defaults (salvage sea 1, dam sea 0 + turbulence 0.3, ship sea 2, bridge river 2 kn, oilrig sea 3, pipeline_ext sea 1, pipeline_int river 1 kn, aquaculture sea 1).
+- **Turbulence mode**: `CurrentField.velocityAt` returns fbm random-direction flow when `currentDirectionDeg ≥ 359.9` (verified random displacement (1.16, 0.99) in 4 s). Triggered via the existing direction slider max — no new UI.
+
+## M9 — Deep code review (performance & hidden bugs)
+
+- **Bug fix**: `RigidBody6` inertia `Ix` formula was `h² + l²`, corrected to `h² + w²` (roll axis cross-section is YZ).
+- **Alloc fix**: `velocityBody` / `relativeVelocityBody` reuse instance `invQuat` instead of `clone().invert()` every step.
+- **Render fix**: HUD at 10 Hz re-rendered the whole `TrainingScreen`; decoupled — `PovHud` reads `hud` internally, status bar reads via small `HudStatusBar` component.
+- Engine loop clamps `dt ≤ 0.1 s` (prevents jumps after background tab return).
+- Sonar quality tier: low graphics → beams ×0.6 (`SonarSampler.setBeamScale`).
+- Seafloor ray-march step 1.2 → 1.6 m.
+- **Frame-sliced sonar**: each tick samples only 1/3 of beams (`sample(pos, yaw, start, count)` + `SonarSimulator.renderFrame`), image scrolls smoothly; fixed noise pattern (`rngBase = 0`) eliminates flicker.
+- `envParams` excluded from persist; debounced (500 ms) localStorage write.
+- `SettingsMenu` lazy rendering (zero inner hooks when closed).
+
+## M10 — Full i18n coverage & browser-language detection
+
+- ~33 new keys across zh/en/es: 8 scene names/descriptions, 2 vehicle names/descriptions, sonar panel labels (freq switch, palette, range/sector/gain/noise, hint), task elapsed, POV attitude.
+- No hard-coded Chinese left in UI text (scene/vehicle `name` remain data-only).
+- `detectLanguage()`: `navigator.language` → zh / es / **en fallback**; manual choice persists and wins.
+
+## M11 — UI cleanup & input fixes
+
+- Removed top-bar chips (coordinate frame, power %) that collided with the task panel; moved HUD-layout & unit chips to the status bar; removed the controls hint line.
+- `S` key now toggles sonar (was shadowed by KEYMAP's backward); backward moved to `Z`; removed `3` key sonar toggle.
+
+## M12 — Sonar parameter tuning (user-requested)
+
+- Noise: default = 1, slider min 1 / max 2, **direct mapping** (inverted mapping reverted at user request; default must have audible noise).
+- Frequencies re-tuned: **high freq** max sector 80°, max range 40 m, vertical ±6° (12° total); **low freq** max sector 120°, max range 120 m, vertical ±10° (20° total). Vertical sub-rays now symmetric around 0 driven by `params.verticalDeg`; sliders' max are frequency-dependent.
+
+## M13 — Git & docs
+
+- `git init`, `.gitignore` (node_modules/dist/.tmp/logs/editor/env), first commit `23dca89`.
+- Bilingual README (EN `README.md` + `README.zh-CN.md`): intro, deployment (dev/build/static hosting), controls.
+- This development log + `DEVELOPER_GUIDE.md` for second-stage development.
+
+## Open backlog
+
+- i18n of dynamic scene-mesh names.
+- Further sonar frame-slicing (6 slices) on low-end devices.
+- GLTF external model pipeline as default for branded vehicles.
+- CI + GitHub Pages workflow.
