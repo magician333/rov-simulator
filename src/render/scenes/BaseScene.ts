@@ -7,6 +7,8 @@ import * as THREE from 'three';
 import type { EnvironmentParams } from '../../core/environment/EnvironmentState';
 import type { LocalFlowZone } from '../../core/environment/CurrentField';
 import type { ColliderShape } from '../../core/physics/Collider';
+import type { QualityLevel } from '../environment/UnderwaterEffects';
+import { getTexture, type TexKind } from '../textures';
 import { seabedHeight } from '../../core/terrain';
 
 export interface SceneSpawn {
@@ -23,6 +25,8 @@ export interface SceneGltfModel {
   position?: [number, number, number];
   rotation?: [number, number, number];
   scale?: [number, number, number];
+  /** 自适应放置（如外部船模立着/比例不符）：水平化 + 缩放到目标船长 + 船底对齐 */
+  fit?: { mode: 'horizontal'; targetLength: number; bottomY: number };
 }
 
 export interface SceneDefinition {
@@ -40,7 +44,7 @@ export interface SceneDefinition {
   /** 碰撞体（球/盒），ROV 不可穿过；海底高度场碰撞始终启用 */
   colliders?: ColliderShape[];
   /** 构建场景物体（程序化几何 + 目标物标记） */
-  build(world: THREE.Scene): void;
+  build(world: THREE.Scene, quality?: QualityLevel): void;
   /** 每帧动画（目标标记旋转等） */
   update?(dt: number, time: number): void;
   /** 清理场景物体 */
@@ -104,20 +108,31 @@ export function disposeObject(root: THREE.Object3D): void {
 }
 
 /** 通用材质工厂（场景共用，避免重复创建） */
-export function boxMaterial(color: number, opts: { roughness?: number; metalness?: number; emissive?: number; emissiveIntensity?: number } = {}): THREE.MeshStandardMaterial {
-  return new THREE.MeshStandardMaterial({
+export interface BoxMatOpts {
+  roughness?: number;
+  metalness?: number;
+  emissive?: number;
+  emissiveIntensity?: number;
+  /** 程序化纹理（写实：混凝土/锈蚀/波纹板/深海金属等） */
+  texture?: TexKind;
+}
+
+export function boxMaterial(color: number, opts: BoxMatOpts = {}): THREE.MeshStandardMaterial {
+  const mat = new THREE.MeshStandardMaterial({
     color,
     roughness: opts.roughness ?? 0.85,
     metalness: opts.metalness ?? 0.1,
     emissive: opts.emissive ?? 0x000000,
     emissiveIntensity: opts.emissiveIntensity ?? 0,
   });
+  if (opts.texture) mat.map = getTexture(opts.texture);
+  return mat;
 }
 
 /** 创建带目标标记环的辅助：返回 { mesh, marker } */
 export function createTargetMarker(radius: number, color: number): THREE.Mesh {
   const marker = new THREE.Mesh(
-    new THREE.TorusGeometry(radius, 0.08, 8, 40),
+    new THREE.TorusGeometry(radius, 0.08, 16, 40),
     new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.7 }),
   );
   marker.rotation.x = Math.PI / 2;

@@ -77,14 +77,16 @@ export const TASKS: Record<string, TaskDefinition> = {
         check: (ctx) => distToTarget(ctx, 'target_propeller') < 15,
       },
       {
-        id: 'check_sides',
-        title: '环绕检查船体',
-        description: '依次经过左右两个检查点（各 5m 内）',
-        check: (ctx) => {
-          const a = distToTarget(ctx, 'check_port');
-          const b = distToTarget(ctx, 'check_starboard');
-          return (a < 5 && b < 5) || (a < 5 && ctx.rov.speedKnots < 4);
-        },
+        id: 'check_port',
+        title: '检查左舷检查点',
+        description: '接近左舷检查点（5m 内）',
+        check: (ctx) => distToTarget(ctx, 'check_port') < 5,
+      },
+      {
+        id: 'check_starboard',
+        title: '检查右舷检查点',
+        description: '接近右舷检查点（5m 内）',
+        check: (ctx) => distToTarget(ctx, 'check_starboard') < 5,
       },
       {
         id: 'approach',

@@ -7,6 +7,8 @@
 import * as THREE from 'three';
 import type { SceneDefinition } from './BaseScene';
 import { markTarget, disposeObject, boxMaterial, createTargetMarker } from './BaseScene';
+import type { QualityLevel } from '../environment/UnderwaterEffects';
+import { getTexture } from '../textures';
 
 const PIPE_R = 1.5; // 半径
 const PIPE_LEN = 44; // 全长（z -22..22）
@@ -29,7 +31,7 @@ class PipelineIntSceneImpl implements SceneDefinition {
 
   private root: THREE.Group | null = null;
   private marker: THREE.Mesh | null = null;
-  build(world: THREE.Scene): void {
+  build(world: THREE.Scene, _quality: QualityLevel = 'high'): void {
     const root = new THREE.Group();
     root.name = 'scene_pipeline_int';
 
@@ -48,10 +50,10 @@ class PipelineIntSceneImpl implements SceneDefinition {
     root.add(shell);
 
     // 内壁：分段环（焊缝标记区）
-    const wallMat = new THREE.MeshStandardMaterial({ color: 0x6f6f76, roughness: 0.7, metalness: 0.35, side: THREE.DoubleSide });
+    const wallMat = new THREE.MeshStandardMaterial({ color: 0x6f6f76, roughness: 0.7, metalness: 0.35, side: THREE.DoubleSide, map: getTexture('deepmetal') });
     const segLen = 4;
     for (let z = -20; z < 20; z += segLen) {
-      const seg = new THREE.Mesh(new THREE.CylinderGeometry(PIPE_R - 0.08, PIPE_R - 0.08, segLen - 0.1, 20, 1, true), wallMat);
+      const seg = new THREE.Mesh(new THREE.CylinderGeometry(PIPE_R - 0.08, PIPE_R - 0.08, segLen - 0.1, 24, 1, true), wallMat);
       seg.rotation.x = Math.PI / 2;
       seg.position.set(0, PIPE_Y, z + segLen / 2);
       root.add(seg);
@@ -59,13 +61,25 @@ class PipelineIntSceneImpl implements SceneDefinition {
 
     // 目标：内壁焊缝区（z=0，加亮环）
     const weld = new THREE.Mesh(
-      new THREE.CylinderGeometry(PIPE_R - 0.12, PIPE_R - 0.12, 1.2, 20, 1, true),
+      new THREE.CylinderGeometry(PIPE_R - 0.12, PIPE_R - 0.12, 1.2, 24, 1, true),
       new THREE.MeshStandardMaterial({ color: 0xb06a2a, roughness: 0.5, metalness: 0.5, emissive: 0x552200, emissiveIntensity: 0.3, side: THREE.DoubleSide }),
     );
     weld.rotation.x = Math.PI / 2;
     weld.position.set(0, PIPE_Y, 0);
     root.add(weld);
     markTarget(weld, 'target_weld', 4);
+
+    // 内壁细节（中/高画质：污渍环 + 加强环）
+    if (_quality !== 'low') {
+      const stainMat = new THREE.MeshStandardMaterial({ color: 0x4a3f33, roughness: 0.9, transparent: true, opacity: 0.6, side: THREE.DoubleSide });
+      for (let i = 0; i < 4; i++) {
+        const z = -18 + i * 9;
+        const stain = new THREE.Mesh(new THREE.CylinderGeometry(PIPE_R - 0.14, PIPE_R - 0.14, 1.4, 24, 1, true), stainMat);
+        stain.rotation.x = Math.PI / 2;
+        stain.position.set(0, PIPE_Y, z);
+        root.add(stain);
+      }
+    }
 
     // 入口/出口端面
     const endMat = boxMaterial(0x7d7d84, { roughness: 0.8 });

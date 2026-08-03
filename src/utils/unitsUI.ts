@@ -26,5 +26,5 @@ export function fmtDist(m: number, units: UnitSystem): string {
 
 /** 温度显示值（℃ → ℉ 若英制） */
 export function fmtTemp(c: number, units: UnitSystem): string {
-  return units === 'imperial' ? (c * 9) / 5 + 32 + '' : c.toFixed(1);
+  return units === 'imperial' ? ((c * 9) / 5 + 32).toFixed(1) : c.toFixed(1);
 }

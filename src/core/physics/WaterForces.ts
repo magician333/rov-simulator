@@ -20,6 +20,8 @@ export class WaterForces {
   private readonly tauTmp = new THREE.Vector3();
   private readonly vRel = new THREE.Vector3();
   private readonly invQuat = new THREE.Quaternion();
+  /** 半阻尼常量 0.5·ρ·CdA（构造预计算） */
+  private readonly linHalf: [number, number, number];
 
   constructor(private config: ROVConfig) {
     const f = SEAWATER_DENSITY * config.displacementM3 * GRAVITY;
@@ -27,6 +29,11 @@ export class WaterForces {
     const [cx, cy, cz] = config.cogOffset;
     const [bx, by, bz] = config.cobOffset;
     this.cogToCob = new THREE.Vector3(bx - cx, by - cy, bz - cz);
+    this.linHalf = [
+      0.5 * SEAWATER_DENSITY * config.dragCoeffs.lin[0],
+      0.5 * SEAWATER_DENSITY * config.dragCoeffs.lin[1],
+      0.5 * SEAWATER_DENSITY * config.dragCoeffs.lin[2],
+    ];
   }
 
   /**
@@ -57,10 +64,9 @@ export class WaterForces {
 
     // 3) 平动阻尼（相对水流速度，二次阻尼）F = -0.5ρ·CdA·|v_rel|·v_rel，累减
     body.relativeVelocityBody(currentWorld, this.vRel);
-    const lin = cfg.dragCoeffs.lin;
-    forceOut.x -= 0.5 * SEAWATER_DENSITY * lin[0] * Math.abs(this.vRel.x) * this.vRel.x;
-    forceOut.y -= 0.5 * SEAWATER_DENSITY * lin[1] * Math.abs(this.vRel.y) * this.vRel.y;
-    forceOut.z -= 0.5 * SEAWATER_DENSITY * lin[2] * Math.abs(this.vRel.z) * this.vRel.z;
+    forceOut.x -= this.linHalf[0] * Math.abs(this.vRel.x) * this.vRel.x;
+    forceOut.y -= this.linHalf[1] * Math.abs(this.vRel.y) * this.vRel.y;
+    forceOut.z -= this.linHalf[2] * Math.abs(this.vRel.z) * this.vRel.z;
 
     // 4) 角阻尼（二次 + 线性）：τ = -D_ang·ω|ω| - D_lin·ω，累减
     const ang = cfg.dragCoeffs.ang;

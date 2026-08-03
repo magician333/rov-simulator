@@ -22,7 +22,27 @@ import type { TaskDefinition } from '../core/task/TaskDefinition';
 import { getRov } from '../core/rov/registry';
 import { TaskRunner, type TaskStateView } from '../core/task/TaskRunner';
 import { SettingsMenu, settingsNavRef } from '../ui/settings/SettingsMenu';
-import { tr, type DictKey } from '../i18n';
+import { tr, type DictKey, type Lang } from '../i18n';
+
+// 高频 interval 内复用的临时对象（避免每 tick 堆分配）
+const TMP_VEC = new THREE.Vector3();
+const TMP_QUAT = new THREE.Quaternion();
+
+/** 按语言本地化任务文本（主初始化与“再来一次”共用，避免重开时回退中文） */
+function localizeTask(task: TaskDefinition, lang: Lang): TaskDefinition {
+  const k = (s: string) => s as DictKey;
+  return {
+    ...task,
+    name: tr(lang, k(`task_${task.sceneId}_name`)),
+    brief: tr(lang, k(`task_${task.sceneId}_brief`)),
+    steps: task.steps.map((st) => ({
+      ...st,
+      title: tr(lang, k(`task_${task.sceneId}_step_${st.id}_title`)),
+      description: tr(lang, k(`task_${task.sceneId}_step_${st.id}_desc`)),
+    })),
+  };
+}
+
 import { fmtDepth, fmtTemp, UNIT_MARKS } from '../utils/unitsUI';
 import { saveSession, loadSession } from '../utils/session';
 import type { TaskContext } from '../core/task/TaskDefinition';
@@ -30,7 +50,7 @@ import type { TaskContext } from '../core/task/TaskDefinition';
 /** 按键映射（docs/03 §4.1） */
 const KEYMAP: Record<string, { axis: keyof ControlInput; dir: 1 | -1 }> = {
   KeyW: { axis: 'surge', dir: 1 },
-  KeyZ: { axis: 'surge', dir: -1 },
+  KeyS: { axis: 'surge', dir: -1 },
   KeyA: { axis: 'sway', dir: -1 },
   KeyD: { axis: 'sway', dir: 1 },
   KeyQ: { axis: 'heave', dir: 1 },
@@ -145,19 +165,7 @@ export function TrainingScreen() {
     const task = TASKS[selectedSceneId];
     taskRunnerRef.current.abort();
     if (task) {
-      const lang = useAppStore.getState().language;
-      const k = (s: string) => s as DictKey;
-      const localized: TaskDefinition = {
-        ...task,
-        name: tr(lang, k(`task_${task.sceneId}_name`)),
-        brief: tr(lang, k(`task_${task.sceneId}_brief`)),
-        steps: task.steps.map((st) => ({
-          ...st,
-          title: tr(lang, k(`task_${task.sceneId}_step_${st.id}_title`)),
-          description: tr(lang, k(`task_${task.sceneId}_step_${st.id}_desc`)),
-        })),
-      };
-      taskRunnerRef.current.start(localized);
+      taskRunnerRef.current.start(localizeTask(task, useAppStore.getState().language));
     }
     actionHoldRef.current = 0;
     trainTimeRef.current = 0;
@@ -173,9 +181,9 @@ export function TrainingScreen() {
       let distanceSonar: DistanceReadings | undefined;
       if (distSonarRef.current) {
         const snap = sim.getRenderSnapshot();
-        const pos = new THREE.Vector3(snap.position.x, snap.position.y, snap.position.z);
-        const q = new THREE.Quaternion(snap.quaternion.x, snap.quaternion.y, snap.quaternion.z, snap.quaternion.w);
-        distanceSonar = distSonarRef.current.sample(pos, q);
+        TMP_VEC.set(snap.position.x, snap.position.y, snap.position.z);
+        TMP_QUAT.set(snap.quaternion.x, snap.quaternion.y, snap.quaternion.z, snap.quaternion.w);
+        distanceSonar = distSonarRef.current.sample(TMP_VEC, TMP_QUAT);
       }
       setHud({ ...sim.getHudSnapshot(), distanceSonar });
 
@@ -228,11 +236,10 @@ export function TrainingScreen() {
       const sim = simRef.current;
       if (!g || !sim) return;
       const snap = sim.getRenderSnapshot();
-      const q = new THREE.Quaternion(snap.quaternion.x, snap.quaternion.y, snap.quaternion.z, snap.quaternion.w);
-      g.obj.position.copy(g.offsetBody).applyQuaternion(q).add(
-        new THREE.Vector3(snap.position.x, snap.position.y, snap.position.z),
-      );
-      g.obj.quaternion.copy(q);
+      TMP_QUAT.set(snap.quaternion.x, snap.quaternion.y, snap.quaternion.z, snap.quaternion.w);
+      TMP_VEC.set(snap.position.x, snap.position.y, snap.position.z);
+      g.obj.position.copy(g.offsetBody).applyQuaternion(TMP_QUAT).add(TMP_VEC);
+      g.obj.quaternion.copy(TMP_QUAT);
     }, 33);
 
     // 训练会话持久化（每 3s 保存位姿与用时，刷新后恢复）
@@ -374,6 +381,7 @@ export function TrainingScreen() {
       window.clearInterval(grabTimer);
       window.clearInterval(padTimer);
       window.clearInterval(sessionTimer);
+      sim.setTetherEnabled(false); // 浮力线已取消
       engine.dispose();
       sim.dispose();
       simRef.current = null;
@@ -444,7 +452,7 @@ export function TrainingScreen() {
         case 'Digit2':
           useAppStore.getState().setViewMode('pov');
           break;
-        case 'KeyS':
+        case 'KeyI':
           useAppStore.getState().setSonarVisible(!useAppStore.getState().sonarVisible);
           break;
         case 'Escape':
@@ -552,9 +560,9 @@ export function TrainingScreen() {
       return;
     }
     const snap = sim.getRenderSnapshot();
-    const q = new THREE.Quaternion(snap.quaternion.x, snap.quaternion.y, snap.quaternion.z, snap.quaternion.w);
-    const tip = new THREE.Vector3(0, -0.3, -0.95).applyQuaternion(q).add(
-      new THREE.Vector3(snap.position.x, snap.position.y, snap.position.z),
+    TMP_QUAT.set(snap.quaternion.x, snap.quaternion.y, snap.quaternion.z, snap.quaternion.w);
+    const tip = new THREE.Vector3(0, -0.3, -0.95).applyQuaternion(TMP_QUAT).add(
+      TMP_VEC.set(snap.position.x, snap.position.y, snap.position.z),
     );
     const tmp = new THREE.Vector3();
     let best: { obj: THREE.Object3D; dist: number; gripSize: number } | null = null;
@@ -599,7 +607,7 @@ export function TrainingScreen() {
     distSonarRef.current?.refreshTargets(); // 场景切换后刷新 DME 采样目标
     const task = TASKS[selectedSceneId];
     taskRunnerRef.current.abort();
-    if (task) taskRunnerRef.current.start(task);
+    if (task) taskRunnerRef.current.start(localizeTask(task, useAppStore.getState().language));
     actionHoldRef.current = 0;
     trainTimeRef.current = 0;
     notifiedRef.current = false;
@@ -718,6 +726,11 @@ function HudStatusBar() {
       <span>{t('hud_pitch')} {hud ? hud.pitchDeg.toFixed(1) : '—'}°</span>
       <span>{t('hud_roll')} {hud ? hud.rollDeg.toFixed(1) : '—'}°</span>
       <span>{t('hud_temp')} {hud ? fmtTemp(hud.temperatureC, units) : '—'} {um.temp}</span>
+      {hud && hud.tetherWrapTurns > 0 && (
+        <span style={{ color: '#ffb74d', fontWeight: 600 }}>
+          ⚠ {t('tether_wrap', { n: hud.tetherWrapTurns })}
+        </span>
+      )}
     </>
   );
 }
@@ -725,7 +738,7 @@ function HudStatusBar() {
 /** 操作帮助面板（顶栏帮助按钮展开，右侧区域） */
 function HelpPanel({ t, onClose }: { t: (k: DictKey, vars?: Record<string, string | number>) => string; onClose: () => void }) {
   const rows: [string, string][] = [
-    ['W / Z', t('help_fwd')],
+    ['W / S', t('help_fwd')],
     ['A / D', t('help_left')],
     ['E / Q', t('help_up')],
     ['←→ / R / F', t('help_rot')],
@@ -734,7 +747,7 @@ function HelpPanel({ t, onClose }: { t: (k: DictKey, vars?: Record<string, strin
     ['G', t('help_coord')],
     ['B', t('help_level')],
     ['L', t('set_lights')],
-    ['S', t('help_sonar')],
+    ['I', t('help_sonar')],
     ['Esc', t('help_pause')],
     ['🎮 ' + t('menu_key'), t('menu_key') + ' · ' + t('back_key')],
     ['🎮 ' + t('pad_hint').split('·')[0], t('pad_hint')],

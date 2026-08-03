@@ -22,6 +22,7 @@ export class SonarSampler {
   private beamScale = 1;
   private raycaster = new THREE.Raycaster();
   private dir = new THREE.Vector3();
+  private readonly attQuat = new THREE.Quaternion();
   /** 采样目标（排除海底/ROV/粒子；场景加载后需 refresh） */
   private targets: THREE.Object3D[] = [];
 
@@ -55,7 +56,13 @@ export class SonarSampler {
   /**
    * 采样（支持分帧：start/count 指定波束范围，count 缺省 = 全量）。
    */
-  sample(position: THREE.Vector3, yawRad: number, start = 0, count?: number): SonarBeamHit[][] {
+  sample(
+    position: THREE.Vector3,
+    yawRad: number,
+    start = 0,
+    count?: number,
+    pose?: { pitchRad: number; rollRad: number },
+  ): SonarBeamHit[][] {
     const beamCount = this.getBeamCount();
     const n = count === undefined ? beamCount : Math.min(count, beamCount - start);
     const { sectorDeg, rangeM } = this.params;
@@ -65,20 +72,21 @@ export class SonarSampler {
     // 垂直子射线：按 params.verticalDeg 对称分布（±half、0）
     const vHalf = this.params.verticalDeg / 2;
     const tilts = [-vHalf, 0, vHalf].map((d) => (d * Math.PI) / 180);
+    // 声纳跟随 ROV 完整姿态（yaw + pitch + roll），与 POV 摄像头朝向一致
+    this.attQuat.setFromEuler(new THREE.Euler(pose?.pitchRad ?? 0, yawRad, pose?.rollRad ?? 0, 'YXZ'));
 
     for (let i = 0; i < n; i++) {
       const beamIndex = start + i;
       const off = -half + (beamCount === 1 ? 0 : (beamIndex / (beamCount - 1)) * sectorDeg * (Math.PI / 180));
-      const a = yawRad + off;
-      const sinA = Math.sin(a);
-      const cosA = Math.cos(a);
+      const sinOff = Math.sin(off);
+      const cosOff = Math.cos(off);
       const echoes: SonarBeamHit[] = [];
 
-      // 垂直开角内多条子射线（上仰/水平/俯角）
+      // 垂直开角内多条子射线（上仰/水平/俯角），先局部方向再乘姿态
       for (const tilt of tilts) {
         const cosT = Math.cos(tilt);
         const sinT = Math.sin(tilt);
-        this.dir.set(-sinA * cosT, sinT, -cosA * cosT);
+        this.dir.set(-sinOff * cosT, sinT, -cosOff * cosT).applyQuaternion(this.attQuat);
         this.collectEchoes(echoes, position, rangeM);
         // 向下子射线追加海底回波段（解析 ray-march）
         if (sinT < 0) {

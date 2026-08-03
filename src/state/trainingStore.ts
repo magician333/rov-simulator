@@ -43,5 +43,5 @@ export function exportRecords(records: TrainingRecord[]): void {
   a.href = url;
   a.download = `rov-training-records-${new Date().toISOString().slice(0, 10)}.json`;
   a.click();
-  URL.revokeObjectURL(url);
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
 }

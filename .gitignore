@@ -36,3 +36,6 @@ Thumbs.db
 
 # ---- Coverage ----
 coverage/
+
+# ---- External modeling assets (provided by artists, not repo-managed) ----
+public/models/

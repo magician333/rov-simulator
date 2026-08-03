@@ -97,7 +97,7 @@ export class RovGltfModel {
       this.root.add(spot.target);
       this.lights.push(spot);
 
-      const bulb = new THREE.Mesh(new THREE.SphereGeometry(0.06, 10, 10), MAT_LAMP_EMISSIVE);
+      const bulb = new THREE.Mesh(new THREE.SphereGeometry(0.06, 24, 24), MAT_LAMP_EMISSIVE);
       bulb.position.copy(pos);
       this.root.add(bulb);
       this.lampBulbs.push(bulb);

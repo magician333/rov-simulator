@@ -58,6 +58,10 @@ export class ROVController {
   private readonly swayMaxForce: number;
   /** 垂直限速对应的 heave 最大推力（机型 maxHeaveSpeedKnots；缺省不限速） */
   private readonly heaveMaxForce: number;
+  /** 稳态限速速度（缓存 sqrt，避免每步计算） */
+  private vForwardLimit = 3.0;
+  private readonly vSwayLimit: number;
+  private readonly vHeaveLimit: number;
 
   /** 一键水平状态 */
   levelActive = false;
@@ -86,12 +90,15 @@ export class ROVController {
     // 侧向限速（缺省 = maxSpeedKnots）：F = 0.5·ρ·CdA_x·v²
     const vSway = kn2ms(config.maxSwaySpeedKnots ?? config.maxSpeedKnots);
     this.swayMaxForce = 0.5 * SEAWATER_DENSITY * this.config.dragCoeffs.lin[0] * vSway * vSway;
+    this.vSwayLimit = vSway;
     // 垂直限速（可选）：F = 0.5·ρ·CdA_y·v²
     if (config.maxHeaveSpeedKnots) {
       const vH = kn2ms(config.maxHeaveSpeedKnots);
       this.heaveMaxForce = 0.5 * SEAWATER_DENSITY * this.config.dragCoeffs.lin[1] * vH * vH;
+      this.vHeaveLimit = vH;
     } else {
       this.heaveMaxForce = Infinity;
+      this.vHeaveLimit = Infinity;
     }
   }
 
@@ -101,6 +108,7 @@ export class ROVController {
     const v = kn2ms(clamped);
     const cdA = this.config.dragCoeffs.lin[2];
     this.surgeMaxForce = 0.5 * SEAWATER_DENSITY * cdA * v * v;
+    this.vForwardLimit = v;
   }
 
   getMaxSpeedKnots(): number {
@@ -135,8 +143,8 @@ export class ROVController {
    * cmd6 顺序：F_x(sway), F_y(heave), F_z(surge), τ_x(pitch), τ_y(yaw), τ_z(roll)
    */
   computeCmd6(input: ControlInput, body: RigidBody6, out: number[]): void {
-    const cmd: [number, number, number, number, number, number] = [0, 0, 0, 0, 0, 0];
     const lvl = this.powerLevel;
+    out[0] = 0; out[1] = 0; out[2] = 0; out[3] = 0; out[4] = 0; out[5] = 0;
 
     // 平动（动力曲线映射）
     let surge = applyCurve(input.surge, this.powerCurve);
@@ -160,21 +168,18 @@ export class ROVController {
       vForward = -vBody.z;
       vSway = Math.abs(vBody.x);
     }
-    const vLimit = Math.sqrt((2 * this.surgeMaxForce) / (SEAWATER_DENSITY * this.config.dragCoeffs.lin[2]));
-    if (vForward > vLimit && surge > 0) {
-      surge *= Math.max(0, 1 - (vForward - vLimit) / vLimit);
+    if (vForward > this.vForwardLimit && surge > 0) {
+      surge *= Math.max(0, 1 - (vForward - this.vForwardLimit) / this.vForwardLimit);
     }
     // 侧向限速
-    const vSwayLimit = Math.sqrt((2 * this.swayMaxForce) / (SEAWATER_DENSITY * this.config.dragCoeffs.lin[0]));
-    if (vSway > vSwayLimit && Math.abs(sway) > 0) {
-      sway *= Math.max(0, 1 - (vSway - vSwayLimit) / vSwayLimit);
+    if (vSway > this.vSwayLimit && Math.abs(sway) > 0) {
+      sway *= Math.max(0, 1 - (vSway - this.vSwayLimit) / this.vSwayLimit);
     }
     // 垂直限速（世界系竖直速度，缩放 heave 变量）
     if (this.heaveMaxForce !== Infinity) {
-      const vHeaveLimit = Math.sqrt((2 * this.heaveMaxForce) / (SEAWATER_DENSITY * this.config.dragCoeffs.lin[1]));
       const vy = Math.abs(body.velocityWorld.y);
-      if (vy > vHeaveLimit && Math.abs(heave) > 0) {
-        heave *= Math.max(0, 1 - (vy - vHeaveLimit) / vHeaveLimit);
+      if (vy > this.vHeaveLimit && Math.abs(heave) > 0) {
+        heave *= Math.max(0, 1 - (vy - this.vHeaveLimit) / this.vHeaveLimit);
       }
     }
     // heave 推力上限（限速对应的平衡推力；避免满推过冲振荡）
@@ -184,11 +189,11 @@ export class ROVController {
     const fSway = Math.min(this.fMax.sway, this.swayMaxForce);
     if (this.axisMode === 'body') {
       // 机身坐标系：力直接沿体轴
-      cmd[0] = sway * fSway * lvl;            // F_x（右 +X）
-      cmd[1] = heave * fHeave * lvl;          // F_y（上 +Y）
-      cmd[2] = -surge * fSurge * lvl;         // F_z（前进 = -Z）
+      out[0] = sway * fSway * lvl;            // F_x（右 +X）
+      out[1] = heave * fHeave * lvl;          // F_y（上 +Y）
+      out[2] = -surge * fSurge * lvl;         // F_z（前进 = -Z）
       // 偏航：直接用体 Y
-      if (this.config.controllableAxes.includes('yaw')) cmd[4] = -applyCurve(input.yaw, this.powerCurve) * this.tauMax.yaw * lvl;
+      if (this.config.controllableAxes.includes('yaw')) out[4] = -applyCurve(input.yaw, this.powerCurve) * this.tauMax.yaw * lvl;
     } else {
       // 世界坐标系：前 = 机头水平投影方向（yaw，忽略 pitch/roll）
       // 前向水平 = rotateY(yaw)·(0,0,-1) = (-sinY, 0, -cosY)
@@ -205,36 +210,28 @@ export class ROVController {
       const Fwz = surge * fSurge * fz + sway * fSway * rz;
       this.invQuat.copy(body.quaternion).invert();
       this.vTmp.set(Fwx * lvl, Fwy * lvl, Fwz * lvl).applyQuaternion(this.invQuat);
-      cmd[0] = this.vTmp.x;
-      cmd[1] = this.vTmp.y;
-      cmd[2] = this.vTmp.z;
+      out[0] = this.vTmp.x;
+      out[1] = this.vTmp.y;
+      out[2] = this.vTmp.z;
       // 偏航用体 Y（水平时 = 世界 Y）：不转体，稳定无耦合
-      if (this.config.controllableAxes.includes('yaw')) cmd[4] = -applyCurve(input.yaw, this.powerCurve) * this.tauMax.yaw * lvl;
+      if (this.config.controllableAxes.includes('yaw')) out[4] = -applyCurve(input.yaw, this.powerCurve) * this.tauMax.yaw * lvl;
     }
 
     // 俯仰/横滚：体轴（两种模式一致），应用曲线与动力百分比
-    if (this.config.controllableAxes.includes('pitch')) cmd[3] += applyCurve(input.pitch, this.powerCurve) * this.tauMax.pitch * lvl;
-    if (this.config.controllableAxes.includes('roll')) cmd[5] += applyCurve(input.roll, this.powerCurve) * this.tauMax.roll * lvl;
+    if (this.config.controllableAxes.includes('pitch')) out[3] += applyCurve(input.pitch, this.powerCurve) * this.tauMax.pitch * lvl;
+    if (this.config.controllableAxes.includes('roll')) out[5] += applyCurve(input.roll, this.powerCurve) * this.tauMax.roll * lvl;
 
     // 一键水平：PD 覆盖 pitch/roll
     if (this.levelActive) {
       const euler = EULER_TMP.setFromQuaternion(body.quaternion, 'YXZ');
       const rollErr = -euler.z;
       const pitchErr = -euler.x;
-      cmd[3] = this.kp * pitchErr - this.kd * body.omegaBody.x; // τ_x
-      cmd[5] = this.kp * rollErr - this.kd * body.omegaBody.z;  // τ_z
+      out[3] = this.kp * pitchErr - this.kd * body.omegaBody.x; // τ_x
+      out[5] = this.kp * rollErr - this.kd * body.omegaBody.z;  // τ_z
       // 完成判定：|roll|、|pitch| < 0.01 rad 且角速度足够小
       if (Math.abs(euler.z) < 0.01 && Math.abs(euler.x) < 0.01 && Math.abs(body.omegaBody.x) < 0.05 && Math.abs(body.omegaBody.z) < 0.05) {
         this.levelActive = false;
       }
     }
-
-    out.length = 6;
-    out[0] = cmd[0];
-    out[1] = cmd[1];
-    out[2] = cmd[2];
-    out[3] = cmd[3];
-    out[4] = cmd[4];
-    out[5] = cmd[5];
   }
 }

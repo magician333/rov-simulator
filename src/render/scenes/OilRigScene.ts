@@ -6,6 +6,8 @@
 import * as THREE from 'three';
 import type { SceneDefinition } from './BaseScene';
 import { markTarget, disposeObject, boxMaterial, createTargetMarker, addSeaweed } from './BaseScene';
+import type { QualityLevel } from '../environment/UnderwaterEffects';
+import { seabedHeight } from '../../core/terrain';
 
 class OilRigSceneImpl implements SceneDefinition {
   readonly id = 'oilrig';
@@ -30,16 +32,29 @@ class OilRigSceneImpl implements SceneDefinition {
   private marker: THREE.Mesh | null = null;
   private markerY = -9;
 
-  build(world: THREE.Scene): void {
+  build(world: THREE.Scene, quality: QualityLevel = 'high'): void {
     const root = new THREE.Group();
     root.name = 'scene_oilrig';
 
-    const legMat = boxMaterial(0x6a4a2f, { roughness: 0.8, metalness: 0.4 });
+    const legMat = boxMaterial(0x6a4a2f, { roughness: 0.85, metalness: 0.5, texture: 'rusty' });
     // 四根斜腿（从平台腿顶部到海底）
     for (const [x, z] of [[-8, -4], [8, -4], [-8, 6], [8, 6]] as const) {
-      const leg = new THREE.Mesh(new THREE.CylinderGeometry(1.4, 1.8, 20, 12), legMat);
+      const leg = new THREE.Mesh(new THREE.CylinderGeometry(1.4, 1.8, 20, 24), legMat);
       leg.position.set(x, -1.5, z);
       root.add(leg);
+    }
+
+    // 腿与斜撑连接节点（K 型球节点，真实导管架细节）
+    if (quality !== 'low') {
+      const nodeMat = boxMaterial(0x6a4a2f, { roughness: 0.8, metalness: 0.5, texture: 'rusty' });
+      for (let i = 0; i < 3; i++) {
+        const y = -4 - i * 3;
+        for (const [x, z] of [[-8, -4], [8, -4], [-8, 6], [8, 6]] as const) {
+          const node = new THREE.Mesh(new THREE.SphereGeometry(1.15, 24, 24), nodeMat);
+          node.position.set(x, y, z);
+          root.add(node);
+        }
+      }
     }
 
     // 交叉支撑（X 型）
@@ -54,14 +69,55 @@ class OilRigSceneImpl implements SceneDefinition {
       }
     }
 
+    // 底部基座桩 + 甲板下横梁（中/高画质）
+    if (quality !== 'low') {
+      const pileMat = boxMaterial(0x3f3a35, { roughness: 0.9, metalness: 0.5 });
+      for (const [x, z] of [[-8, -4], [8, -4], [-8, 6], [8, 6]] as const) {
+        const pile = new THREE.Mesh(new THREE.BoxGeometry(2.6, 2.4, 2.6), pileMat);
+        pile.position.set(x, -12.6, z);
+        root.add(pile);
+      }
+      // 甲板下方交叉主梁
+      const beamMat = boxMaterial(0x5a4030, { roughness: 0.8, metalness: 0.4 });
+      for (const [a, b] of [[[-8, -4], [8, 6]], [[8, -4], [-8, 6]]] as const) {
+        const beam = new THREE.Mesh(new THREE.BoxGeometry(17, 0.6, 0.6), beamMat);
+        beam.position.set((a[0] + b[0]) / 2, 0.2, (a[1] + b[1]) / 2);
+        beam.rotation.y = Math.atan2(b[1] - a[1], b[0] - a[0]);
+        root.add(beam);
+      }
+    }
+
+    // 管汇管线 + 防沉板（中/高画质）
+    if (quality !== 'low') {
+      const pipeMat2 = boxMaterial(0x8a2f2f, { roughness: 0.7, metalness: 0.45 });
+      // 管汇架上多根管线
+      for (let i = 0; i < 4; i++) {
+        const line = new THREE.Mesh(new THREE.CylinderGeometry(0.25, 0.25, 11, 24), pipeMat2);
+        line.rotation.z = Math.PI / 2;
+        line.position.set(-2 + i * 1.4, -9.6 + (i % 2) * 0.8, 0);
+        root.add(line);
+      }
+      // 立管（管汇架角落上升）
+      for (const [x, z] of [[-4, -2], [4, 2]] as const) {
+        const riser = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.4, 8, 24), pipeMat2);
+        riser.position.set(x, -7, z);
+        root.add(riser);
+      }
+      // 防沉板（海底格栅）
+      const plateMat = boxMaterial(0x3f3a35, { roughness: 0.9, metalness: 0.5 });
+      const plate = new THREE.Mesh(new THREE.BoxGeometry(13, 0.3, 9), plateMat);
+      plate.position.set(0, seabedHeight(0, 0) + 0.15, 1);
+      root.add(plate);
+    }
+
     // 水下管汇架（目标区域）
-    const manifoldMat = boxMaterial(0x7a2f2f, { roughness: 0.7, metalness: 0.45 });
+    const manifoldMat = boxMaterial(0x7a2f2f, { roughness: 0.75, metalness: 0.5, texture: 'rusty' });
     const manifold = new THREE.Mesh(new THREE.BoxGeometry(10, 2.4, 6), manifoldMat);
     manifold.position.set(0, -10.5, 0);
     root.add(manifold);
     // 管汇上的管线
     for (let i = 0; i < 4; i++) {
-      const pipe = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.22, 10, 8), boxMaterial(0x8a8a8f, { roughness: 0.5, metalness: 0.6 }));
+      const pipe = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.22, 10, 24), boxMaterial(0x8a8a8f, { roughness: 0.5, metalness: 0.6 }));
       pipe.rotation.z = Math.PI / 2;
       pipe.position.set(0, -10.5 + 0.5 + i * 0.5, -1.5 + i);
       root.add(pipe);

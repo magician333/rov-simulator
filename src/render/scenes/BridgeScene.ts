@@ -7,6 +7,7 @@ import * as THREE from 'three';
 import type { SceneDefinition } from './BaseScene';
 import { markTarget, disposeObject, boxMaterial, createTargetMarker, addSeaweed } from './BaseScene';
 import { seabedHeight } from '../../core/terrain';
+import type { QualityLevel } from '../environment/UnderwaterEffects';
 
 class BridgeSceneImpl implements SceneDefinition {
   readonly id = 'bridge';
@@ -39,13 +40,14 @@ class BridgeSceneImpl implements SceneDefinition {
 
   private root: THREE.Group | null = null;
   private marker: THREE.Mesh | null = null;
+  private markerY = 0;
 
-  build(world: THREE.Scene): void {
+  build(world: THREE.Scene, _quality: QualityLevel = 'high'): void {
     const root = new THREE.Group();
     root.name = 'scene_bridge';
 
-    const pierMat = boxMaterial(0x8f8f96, { roughness: 0.85, metalness: 0.1 });
-    const pillarGeo = new THREE.CylinderGeometry(3, 3.4, 27, 14);
+    const pierMat = boxMaterial(0x8f8f96, { roughness: 0.9, metalness: 0.08, texture: 'concrete' });
+    const pillarGeo = new THREE.CylinderGeometry(3, 3.4, 27, 24);
 
     // 三根桥墩（基座接触水底：墩底 = seabedHeight）
     for (const x of [-15, 0, 15]) {
@@ -59,7 +61,7 @@ class BridgeSceneImpl implements SceneDefinition {
     const capBedY = seabedHeight(0, -10);
     const cap = new THREE.Mesh(
       new THREE.BoxGeometry(42, 3, 10),
-      boxMaterial(0x7d7d84, { roughness: 0.85 }),
+      boxMaterial(0x7d7d84, { roughness: 0.88, texture: 'concrete' }),
     );
     cap.position.set(0, capBedY + 15, -10);
     root.add(cap);
@@ -67,14 +69,14 @@ class BridgeSceneImpl implements SceneDefinition {
     // 桥底面板
     const deck = new THREE.Mesh(
       new THREE.BoxGeometry(50, 1.2, 16),
-      boxMaterial(0x6b6b72, { roughness: 0.8 }),
+      boxMaterial(0x6b6b72, { roughness: 0.85, texture: 'concrete' }),
     );
     deck.position.set(0, capBedY + 16.5, -10);
     root.add(deck);
 
     // 冲刷区（中墩底部，目标，贴地）
     const scour = new THREE.Mesh(
-      new THREE.CylinderGeometry(3.6, 3.6, 0.6, 14),
+      new THREE.CylinderGeometry(3.6, 3.6, 0.6, 24),
       boxMaterial(0x4a3a35, { roughness: 0.95, emissive: 0x332211, emissiveIntensity: 0.3 }),
     );
     scour.position.set(0, capBedY + 0.3, -10);
@@ -83,8 +85,19 @@ class BridgeSceneImpl implements SceneDefinition {
 
     const marker = createTargetMarker(5, 0xffd54f);
     marker.position.set(0, capBedY + 4, -10);
+    this.markerY = capBedY + 4;
     root.add(marker);
     this.marker = marker;
+
+    // 墩身细节（中/高画质：横梁 + 系梁）
+    if (_quality !== 'low') {
+      const beamMat = boxMaterial(0x7d7d84, { roughness: 0.88, texture: 'concrete' });
+      for (let i = 0; i < 2; i++) {
+        const beam = new THREE.Mesh(new THREE.BoxGeometry(30, 1.6, 2.4), beamMat);
+        beam.position.set(0, capBedY + 11 - i * 5, -10);
+        root.add(beam);
+      }
+    }
 
     // 桥墩周围护石
     const rockGeo = new THREE.DodecahedronGeometry(0.5, 0);
@@ -113,7 +126,7 @@ class BridgeSceneImpl implements SceneDefinition {
   update(dt: number, time: number): void {
     if (this.marker) {
       this.marker.rotation.y += dt * 1.4;
-      this.marker.position.y = -8 + Math.sin(time * 1.1) * 0.15;
+      this.marker.position.y = this.markerY + Math.sin(time * 1.1) * 0.15;
     }
   }
 

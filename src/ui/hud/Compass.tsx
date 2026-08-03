@@ -4,6 +4,8 @@
  * 缩小版、半透明、中央航向指针朝下（游标式）。
  */
 
+import { memo } from 'react';
+
 const CARDINALS: Record<number, string> = {
   0: 'N',
   90: 'E',
@@ -11,7 +13,7 @@ const CARDINALS: Record<number, string> = {
   270: 'W',
 };
 
-export function Compass({ headingDeg }: { headingDeg: number }) {
+export const Compass = memo(function Compass({ headingDeg }: { headingDeg: number }) {
   const W = 380;
   const H = 58;
   const center = W / 2;
@@ -80,4 +82,4 @@ export function Compass({ headingDeg }: { headingDeg: number }) {
       </div>
     </div>
   );
-}
+});

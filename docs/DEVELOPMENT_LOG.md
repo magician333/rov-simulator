@@ -94,3 +94,24 @@ Chronological record of the project, milestones and key decisions. Useful for on
 - Further sonar frame-slicing (6 slices) on low-end devices.
 - GLTF external model pipeline as default for branded vehicles.
 - CI + GitHub Pages workflow.
+
+## M14 — Realism pass, model integration & deep review fixes
+
+- **Realism**: geometry subdivisions (cylinders 24 / spheres 24 / tori 16-24); ROV duct guards, DVL probe, sonar probe; 8 scenes got real-world details (Salvage bridge house + portholes, Ship deck containers + waterline, Dam gate rails + baffle blocks, Bridge crossbeams, OilRig manifold + anti-scour plates, Pipeline anode blocks + pebbles, PipelineInt fouling rings, Aquaculture fish school); RoomEnvironment PMREM as `scene.environment`; procedural canvas textures (`concrete/rusty/plate/mud/deepmetal`) applied to seabed, hull, platforms, pipes, concrete.
+- **Ship scene**: GLTF external model support (`SceneGltfModel.fit` auto-orients/scales/bottoms any GLB hull) evaluated with the user-provided `ship.glb`, then reverted to a refined procedural hull (streamlined bow + bulbous bow, bridge/funnel/mast at stern, mid-deck containers, detailed 4-blade propeller with shaft/hub/rudder). Extra real parts in other scenes (OilRig K-node joints, Dam gate plates, Pipeline weld rings).
+- **Input polish**: light cones visible only in POV (third person hides them, `ROVVisual.setLightConesVisible`); tether (buoyancy line) is a 48-segment yellow `TubeGeometry` (0xFFE800) from the ROV top with pose-affected exit, no surface buoy; tether feature then cancelled (default off, UI switch removed, migrate clears old persisted value, code retained).
+- **Sonar follows camera**: `SonarSampler.sample` takes `pose` (pitch/roll), beam directions are rotated by the full vehicle attitude quaternion (yaw/pitch/roll YXZ) so the fan tracks the POV camera.
+- **Deep review (3 parallel sub-agent reviews + parent physics audit), all fixes**:
+  - `RigidBody6` inertia fix: `Ix = m/12·(h²+l²)` (was using width; length is the Z axis).
+  - `SimulationEngine.reset()` now clears control input and cancels level-attitude (old inputs persisted across reset).
+  - Ship task: `check_sides` split into sequential `check_port` → `check_starboard` steps (previous logic could never trigger).
+  - Thruster rotor animation: rotor wrapped in an orientation `Group` (Euler accumulation no longer overwrites the duct-aligned quaternion — no more wobble).
+  - `SceneManager` GLTF async race guard: drop the model if the scene changed while loading; `Engine` disposes `scene.environment` and the removed ROV; tether hide/dispose branches; Bridge target ring uses stored `markerY`.
+  - i18n: `handleRestart` re-localizes tasks (was falling back to Chinese); SonarView meta/high-freq/beam labels now i18n; `fmtTemp` imperial `toFixed(1)`; `settings_nav_hint` key; MainMenu locale-aware dates.
+  - Perf: integrator quaternion temps reused; `ROVController` caches speed-limit sqrt and writes `out` in place; `ThrusterAllocator.allocate` reuses buffers (no per-step array churn); `WaterForces` precomputes half-drag constants; DVL damp constant; sonar view draws brightness+palette in one pass with reused `ImageData`; `Compass` memoized; SonarView meta readout extracted (no whole-view hud subscription); water ripples update every other frame; dead code/keys cleaned (`bodyToWorld/worldToBody`, `createStaticSnapshot`, 8 unused i18n keys, unused `matVec`); persist migrate versioned (v5).
+
+## Open backlog
+- i18n of dynamic scene-mesh names.
+- Further sonar frame-slicing (6 slices) on low-end devices.
+- GLTF external model pipeline as default for branded vehicles (ship.glb provided but not used; procedural hull kept).
+- CI + GitHub Pages workflow.

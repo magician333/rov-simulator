@@ -25,10 +25,11 @@ export class RigidBody6 {
 
   constructor(readonly config: ROVConfig) {
     // 长方体近似惯性矩：I = m/12 * (b²+c²)
+    // 约定：length=Z（前后）、width=X（左右）、height=Y（上下）
+    // 绕 X 轴：截面 YZ → 用 height 与 length；绕 Y 轴：截面 XZ → width 与 length；绕 Z 轴：截面 XY → width 与 height
     const { length, width, height } = config.dimensions;
     const m = config.massKg;
-    // I_x 绕 X（前后轴）：截面 YZ 平面 → 用高与宽
-    const Ix = (m / 12) * (height * height + width * width);
+    const Ix = (m / 12) * (height * height + length * length);
     const Iy = (m / 12) * (width * width + length * length);
     const Iz = (m / 12) * (width * width + height * height);
     this.inertiaBody = new THREE.Vector3(Ix, Iy, Iz);

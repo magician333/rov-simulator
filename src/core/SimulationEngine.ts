@@ -38,7 +38,6 @@ export class SimulationEngine {
 
   private lightsOn: boolean;
   private accumulator = 0;
-  private time = 0;
 
   private readonly euler = new THREE.Euler();
   private lastThrusterNorm: number[] = [];
@@ -66,6 +65,8 @@ export class SimulationEngine {
     this.environment.reset();
     this.accumulator = 0;
     this.lastThrusterNorm.fill(0);
+    this.clearControlInput();
+    this.physics.controllerRef.cancelLevel();
   }
 
   /** 应用场景局部水流区（场景切换时） */
@@ -76,6 +77,26 @@ export class SimulationEngine {
   /** 应用场景碰撞体（场景切换时） */
   setSceneColliders(colliders: ColliderShape[]): void {
     this.physics.setSceneColliders(colliders);
+  }
+
+  /** 设置脐带缆（水面锚点 = 出生点上方；场景切换/重置调用） */
+  setTether(anchorXZ: [number, number], slack?: number): void {
+    this.physics.setTetherAnchor(new THREE.Vector3(anchorXZ[0], 0.02, anchorXZ[1]), slack);
+  }
+
+  /** 启用/关闭浮力线 */
+  setTetherEnabled(on: boolean): void {
+    this.physics.setTetherEnabled(on);
+  }
+
+  /** 脐带缆状态（供 HUD/UI） */
+  getTetherState(): { wrapTurns: number; tension: number } {
+    return { wrapTurns: this.physics.tether.wrapTurns, tension: this.physics.tether.tension };
+  }
+
+  /** 脐带缆锚点（渲染用） */
+  getTetherAnchor(): THREE.Vector3 {
+    return this.physics.tether.anchor;
   }
 
   /** 开启/关闭 DVL */
@@ -139,7 +160,6 @@ export class SimulationEngine {
     while (this.accumulator >= FIXED_DT && steps < MAX_ACCUMULATE_STEPS) {
       const res = this.physics.step(FIXED_DT);
       this.lastThrusterNorm = res.thrusterNorm;
-      this.time += FIXED_DT;
       this.accumulator -= FIXED_DT;
       steps++;
     }
@@ -182,13 +202,15 @@ export class SimulationEngine {
       rollDeg: s.euler.roll,
       temperatureC: this.environment.get().temperatureC,
       attitude: s.quaternion,
+      tetherWrapTurns: this.physics.tether.wrapTurns,
+      tetherTension: this.physics.tether.tension,
     };
   }
 
   /** 水流场采样（供渲染层展示水流方向等，可选） */
-  sampleCurrentAt(pos: THREE.Vector3, out: THREE.Vector3): THREE.Vector3 {
-    void pos; // 预留湍流采样；当前返回基准流
-    // 简化：直接读环境基准流（湍流由物理内部处理）
+  sampleCurrentAt(_pos: THREE.Vector3, out: THREE.Vector3): THREE.Vector3 {
+    // 仅基准流（湍流由物理内部处理；局部流/湍流采样预留）
+
     const e = this.environment.get();
     const rad = (e.currentDirectionDeg * Math.PI) / 180;
     out.set(Math.sin(rad), 0, Math.cos(rad)).multiplyScalar(e.currentSpeed);

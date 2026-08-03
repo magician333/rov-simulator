@@ -74,7 +74,7 @@ export class AttitudeIndicator {
     const g = new THREE.Group();
     // 参考环（人工水平仪外环）
     const ring = new THREE.Mesh(
-      new THREE.TorusGeometry(1.05, 0.014, 8, 64),
+      new THREE.TorusGeometry(1.05, 0.014, 16, 64),
       new THREE.MeshBasicMaterial({ color: 0x8ad5f5, transparent: true, opacity: 0.75 }),
     );
     ring.rotation.x = Math.PI / 2;

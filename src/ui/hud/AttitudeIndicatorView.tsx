@@ -41,7 +41,7 @@ export function AttitudeIndicatorView({ quaternion, size = 240 }: Props) {
       ai.dispose();
       aiRef.current = null;
     };
-  }, []);
+  }, [size]); // 画布分辨率跟随 size 重建
 
   return (
     <div
@@ -55,7 +55,7 @@ export function AttitudeIndicatorView({ quaternion, size = 240 }: Props) {
         background: 'rgba(3, 22, 34, 0.55)',
       }}
     >
-      <canvas ref={canvasRef} width={240} height={240} style={{ width: '100%', height: '100%', display: 'block' }} />
+      <canvas ref={canvasRef} width={size} height={size} style={{ width: '100%', height: '100%', display: 'block' }} />
     </div>
   );
 }

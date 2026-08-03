@@ -109,7 +109,7 @@ New scene / vehicle / task = implement definition + register. The UI picks up ne
 ### 4.2 Add a new vehicle
 
 1. Create config in `src/core/rov/ROVConfig.ts` or a new file, implement `ROVConfig`.
-2. Thrusters: for full 6-DOF control use a vector layout (see `chasing_m2`: 8 thrusters, 4 front / 4 rear, all-vector 3D oblique).
+2. Thrusters: for full 6-DOF control use a vector layout (see `chasing_m2s`: 8 thrusters, 4 front / 4 rear, all-vector 3D oblique).
 3. Add `maxSwaySpeedKnots` / `maxHeaveSpeedKnots` for directional speed limits.
 4. Register in `core/rov/registry.ts`; add `rov_<id>_name` / `rov_<id>_desc` i18n keys.
 5. Visuals: `GeneratedROVModel` renders from config; attach the manipulator arm to `armGroup` if the vehicle has one.

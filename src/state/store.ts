@@ -77,6 +77,8 @@ interface AppState {
   gamepadSensitivity: GamepadSensitivity;
   /** DVL 多普勒测速（悬停保持 + 洋流削弱） */
   dvlEnabled: boolean;
+  /** 脐带缆（浮力线）开关 */
+  tetherEnabled: boolean;
 
   // actions
   gotoMenu(): void;
@@ -100,6 +102,7 @@ interface AppState {
   setSettingsOpen(v: boolean): void;
   setGamepadSensitivity(v: GamepadSensitivity): void;
   setDvlEnabled(v: boolean): void;
+  setTetherEnabled(v: boolean): void;
   setEnvParam<K extends keyof EnvironmentParams>(key: K, value: number): void;
   resetEnvParams(): void;
   setLightsOn(on: boolean): void;
@@ -136,6 +139,7 @@ export const useAppStore = create<AppState>()(
   settingsOpen: false,
   gamepadSensitivity: 'high',
   dvlEnabled: false,
+  tetherEnabled: false,
 
   gotoMenu: () => set({ screen: 'menu', hud: null, paused: false, taskState: null, taskResult: null }),
   startTraining: () => set({ screen: 'training', paused: false, taskResult: null }),
@@ -158,6 +162,7 @@ export const useAppStore = create<AppState>()(
   setSettingsOpen: (settingsOpen) => set({ settingsOpen }),
   setGamepadSensitivity: (gamepadSensitivity) => set({ gamepadSensitivity }),
   setDvlEnabled: (dvlEnabled) => set({ dvlEnabled }),
+  setTetherEnabled: (tetherEnabled) => set({ tetherEnabled }),
   setEnvParam: (key, value) =>
     set((s) => ({ envParams: { ...s.envParams, [key]: value } })),
   resetEnvParams: () => set({ envParams: { ...DEFAULT_ENV_PARAMS } }),
@@ -169,12 +174,17 @@ export const useAppStore = create<AppState>()(
     {
       name: 'rov-sim-persist',
       storage: createJSONStorage(() => localStorage),
-      // 版本 4：罗盘样式不再持久化（每次启动默认滚动刻度条 ticks，避免旧缓存 disk 覆盖）
-      version: 4,
-      migrate: (persistedState) => {
-        const s = persistedState as { state?: { compassStyle?: string } } | undefined;
+      // 版本 5：罗盘样式不再持久化；浮力线已取消（强制关闭旧缓存值）
+      version: 5,
+      migrate: (persistedState, version) => {
+        const s = persistedState as { state?: { compassStyle?: string; tetherEnabled?: boolean } } | undefined;
         if (s?.state) {
-          return { ...s, state: { ...s.state, compassStyle: 'ticks' } };
+          const state = { ...s.state };
+          if ((version ?? 0) < 5) {
+            delete (state as Record<string, unknown>).compassStyle;
+            state.tetherEnabled = false;
+          }
+          return { ...s, state };
         }
         return persistedState;
       },
@@ -196,6 +206,7 @@ export const useAppStore = create<AppState>()(
         units: s.units,
         gamepadSensitivity: s.gamepadSensitivity,
         dvlEnabled: s.dvlEnabled,
+        tetherEnabled: s.tetherEnabled,
       }),
     },
   ),

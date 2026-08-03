@@ -42,10 +42,6 @@ namespace Mat {
     return r;
   }
 
-  export function matVec(a: number[][], v: number[]): number[] {
-    return a.map((row) => row.reduce((s, x, i) => s + x * v[i], 0));
-  }
-
   /** 6×6 矩阵求逆（高斯-约当消元），不可逆返回 null */
   export function inv6(a: number[][]): number[][] | null {
     const n = 6;
@@ -117,13 +113,23 @@ export class ThrusterAllocator {
   }
 
   /** 分配：cmd6 = [F_x, F_y, F_z, τ_x, τ_y, τ_z]（体坐标系，N/N·m） */
+  /** 复用分配缓冲（避免每物理步 GC 分配） */
+  private readonly uBuf: number[] = [];
+  private readonly normBuf: number[] = [];
+
   allocate(cmd6: readonly number[]): AllocationResult {
-    const u = Mat.matVec(this.Bpinv, [...cmd6]);
+    const u = this.uBuf;
+    const n = this.n;
+    for (let i = 0; i < n; i++) {
+      let acc = 0;
+      for (let j = 0; j < 6; j++) acc += this.Bpinv[i][j] * cmd6[j];
+      u[i] = acc;
+    }
 
     // clamp 到推进器能力
     let saturated = false;
     let scale = Infinity;
-    for (let i = 0; i < this.n; i++) {
+    for (let i = 0; i < n; i++) {
       const max = this.maxForce[i];
       const min = this.minForce[i];
       if (u[i] > max || u[i] < min) saturated = true;
@@ -131,13 +137,15 @@ export class ThrusterAllocator {
       scale = Math.min(scale, cap / Math.max(Math.abs(u[i]), 1e-9));
     }
     if (saturated && scale < 1) {
-      for (let i = 0; i < this.n; i++) u[i] *= scale;
+      for (let i = 0; i < n; i++) u[i] *= scale;
     }
 
-    const norm = u.map((v, i) => {
+    const norm = this.normBuf;
+    for (let i = 0; i < n; i++) {
+      const v = u[i];
       const cap = v > 0 ? this.maxForce[i] : Math.abs(this.minForce[i]);
-      return Math.max(-1, Math.min(1, v / cap));
-    });
+      norm[i] = cap > 1e-9 ? Math.max(-1, Math.min(1, v / cap)) : 0;
+    }
     return { thrust: u, norm, saturated };
   }
 

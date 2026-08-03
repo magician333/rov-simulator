@@ -6,6 +6,8 @@
 import * as THREE from 'three';
 import type { SceneDefinition } from './BaseScene';
 import { markTarget, disposeObject, boxMaterial, createTargetMarker, addSeaweed } from './BaseScene';
+import type { QualityLevel } from '../environment/UnderwaterEffects';
+import { seabedHeight } from '../../core/terrain';
 
 const CAGE = 8; // 网箱半宽
 const CAGE_DEPTH = 6; // 网箱深度
@@ -30,15 +32,15 @@ class AquacultureSceneImpl implements SceneDefinition {
   private marker: THREE.Mesh | null = null;
   private markerY = CAGE_TOP - CAGE_DEPTH / 2;
 
-  build(world: THREE.Scene): void {
+  build(world: THREE.Scene, quality: QualityLevel = 'high'): void {
     const root = new THREE.Group();
     root.name = 'scene_aquaculture';
     const c = CAGE;
 
     // 四根立柱
-    const poleMat = boxMaterial(0x2a6d8f, { roughness: 0.5, metalness: 0.3 });
+    const poleMat = boxMaterial(0x2a6d8f, { roughness: 0.55, metalness: 0.4, texture: 'deepmetal' });
     for (const [x, z] of [[c, c], [-c, c], [c, -c], [-c, -c]] as const) {
-      const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.25, 0.25, CAGE_DEPTH, 8), poleMat);
+      const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.25, 0.25, CAGE_DEPTH, 24), poleMat);
       pole.position.set(x, CAGE_TOP - CAGE_DEPTH / 2, z);
       root.add(pole);
     }
@@ -97,6 +99,46 @@ class AquacultureSceneImpl implements SceneDefinition {
     }
     botGeo.setAttribute('position', new THREE.Float32BufferAttribute(botPts, 3));
     root.add(new THREE.LineSegments(botGeo, netLineMat));
+
+    // 细节（中/高画质）：浮圈圆环 + 锚绳 + 加强网线
+    if (quality !== 'low') {
+      // 顶部浮圈圆环（4 段半圆管）
+      const ringMat = boxMaterial(0xf2c94c, { roughness: 0.6 });
+      for (const [x, z, rot] of [[c, 0, Math.PI / 2], [-c, 0, Math.PI / 2], [0, c, 0], [0, -c, 0]] as const) {
+        const ring = new THREE.Mesh(new THREE.TorusGeometry(c, 0.22, 16, 24, Math.PI / 2), ringMat);
+        ring.position.set(x, CAGE_TOP, z);
+        ring.rotation.y = rot;
+        root.add(ring);
+      }
+      // 四角锚绳（到海底）+ 锚
+      const ropeMat = new THREE.LineBasicMaterial({ color: 0x9aa5a0, transparent: true, opacity: 0.7 });
+      for (const [x, z] of [[c, c], [-c, c], [c, -c], [-c, -c]] as const) {
+        const ySea = seabedHeight(x, z);
+        const ropeGeo = new THREE.BufferGeometry().setFromPoints([
+          new THREE.Vector3(x, CAGE_TOP, z),
+          new THREE.Vector3(x, ySea + 0.4, z),
+        ]);
+        root.add(new THREE.Line(ropeGeo, ropeMat));
+        const anchor = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.35, 0.5), boxMaterial(0x3a3f44, { roughness: 0.8, metalness: 0.6 }));
+        anchor.position.set(x, ySea + 0.18, z);
+        root.add(anchor);
+      }
+    }
+
+    // 鱼群（中/高画质：网箱内游动的简化鱼形）
+    if (quality !== 'low') {
+      const fishMat = boxMaterial(0x6fa8dc, { roughness: 0.6, metalness: 0.2 });
+      for (let i = 0; i < 18; i++) {
+        const fish = new THREE.Mesh(new THREE.ConeGeometry(0.14, 0.42, 6), fishMat);
+        fish.rotation.x = Math.PI / 2;
+        const fx = (Math.random() - 0.5) * (c * 2 - 0.8);
+        const fy = CAGE_TOP - 1 - Math.random() * (CAGE_DEPTH - 2);
+        const fz = (Math.random() - 0.5) * (c * 2 - 0.8);
+        fish.position.set(fx, fy, fz);
+        fish.rotation.y = Math.random() * Math.PI * 2;
+        root.add(fish);
+      }
+    }
 
     // 目标：网衣破损区（一侧网面，加亮网格）
     const breakMat = new THREE.LineBasicMaterial({ color: 0xffb74d, transparent: true, opacity: 0.9 });

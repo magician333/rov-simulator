@@ -6,6 +6,8 @@
 import * as THREE from 'three';
 import type { SceneDefinition } from './BaseScene';
 import { markTarget, disposeObject, boxMaterial, createTargetMarker, addSeaweed } from './BaseScene';
+import type { QualityLevel } from '../environment/UnderwaterEffects';
+import { seabedHeight } from '../../core/terrain';
 
 class DamSceneImpl implements SceneDefinition {
   readonly id = 'dam';
@@ -31,17 +33,78 @@ class DamSceneImpl implements SceneDefinition {
   private marker: THREE.Mesh | null = null;
   private markerY = -7;
 
-  build(world: THREE.Scene): void {
+  build(world: THREE.Scene, quality: QualityLevel = 'high'): void {
     const root = new THREE.Group();
     root.name = 'scene_dam';
 
     // 坝体（从海底到坝顶）
     const dam = new THREE.Mesh(
       new THREE.BoxGeometry(110, 36, 5),
-      boxMaterial(0x9aa3a8, { roughness: 0.9, metalness: 0.05 }),
+      boxMaterial(0x9aa3a8, { roughness: 0.92, metalness: 0.05, texture: 'concrete' }),
     );
     dam.position.set(0, 3, -15); // y: -15..21（坝顶露出水面）
     root.add(dam);
+
+    // 伸缩缝与更多裂缝（中/高画质）
+    if (quality !== 'low') {
+      const seamMat = boxMaterial(0x6e777d, { roughness: 0.9 });
+      for (let x = -40; x <= 40; x += 20) {
+        const seam = new THREE.Mesh(new THREE.BoxGeometry(0.16, 36, 0.18), seamMat);
+        seam.position.set(x, 3, -12.42);
+        root.add(seam);
+      }
+      // 坝面额外两处裂缝装饰（非目标）
+      const extraCrackMat = boxMaterial(0x4a3a35, { roughness: 0.95 });
+      for (const [cx, cy] of [[-15, -4], [12, -9]] as const) {
+        const g = new THREE.Group();
+        g.position.set(cx, cy, -12.3);
+        for (let i = 0; i < 4; i++) {
+          const cw = 0.08 + Math.random() * 0.12;
+          const ch = 1.2 + Math.random() * 2.2;
+          const crack = new THREE.Mesh(new THREE.BoxGeometry(cw, ch, 0.24), extraCrackMat);
+          crack.position.set((i - 1.5) * 0.7, (Math.random() - 0.5) * 1.5, 0);
+          crack.rotation.z = (Math.random() - 0.5) * 0.7;
+          g.add(crack);
+        }
+        root.add(g);
+      }
+    }
+
+    // 泄洪/坝顶细节（中/高画质）
+    if (quality !== 'low') {
+      // 泄洪闸门滑道（坝面竖条）
+      const slideMat = boxMaterial(0x6e777d, { roughness: 0.8, metalness: 0.3 });
+      for (const x of [-31, -27, -23, 27, 31]) {
+        const slide = new THREE.Mesh(new THREE.BoxGeometry(0.4, 20, 0.3), slideMat);
+        slide.position.set(x, -5, -12.4);
+        root.add(slide);
+      }
+      // 泄洪闸门金属门板（滑道间）
+      const gateMat = boxMaterial(0x5a6a78, { roughness: 0.5, metalness: 0.6, texture: 'deepmetal' });
+      for (const x of [-29, 29]) {
+        const gate = new THREE.Mesh(new THREE.BoxGeometry(3.4, 6, 0.5), gateMat);
+        gate.position.set(x, -8, -12.4);
+        root.add(gate);
+      }
+
+      // 坝顶栏杆（细柱 + 横杆）
+      const railMat = boxMaterial(0x8a8f94, { roughness: 0.6, metalness: 0.5 });
+      for (let x = -52; x <= 52; x += 4) {
+        const post = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 1.1, 24), railMat);
+        post.position.set(x, 20.6, -12.6);
+        root.add(post);
+      }
+      const rail = new THREE.Mesh(new THREE.BoxGeometry(108, 0.1, 0.1), railMat);
+      rail.position.set(0, 21.1, -12.6);
+      root.add(rail);
+      // 坝前消力墩（泄洪区底部方块阵列）
+      const dentMat = boxMaterial(0x8a8f94, { roughness: 0.85 });
+      for (let x = -18; x <= 18; x += 3.5) {
+        const dent = new THREE.Mesh(new THREE.BoxGeometry(1.6, 1.6, 1.6), dentMat);
+        dent.position.set(x, seabedHeight(x, -17) + 0.8, -17);
+        root.add(dent);
+      }
+    }
 
     // 坝面细节：分层线
     for (let i = 0; i < 5; i++) {

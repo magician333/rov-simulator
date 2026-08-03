@@ -272,7 +272,7 @@ function SettingsMenuInner(props: {
       );
     }
     return list;
-  }, [tab, language, axisMode, wheelMode, powerCurve, powerLevel, gamepadMode, maxSpeedKnots, hudLayout, sonarVisible, graphicsQuality, units, props.envParams, props]);
+  }, [tab, language, axisMode, wheelMode, powerCurve, powerLevel, gamepadMode, maxSpeedKnots, hudLayout, sonarVisible, graphicsQuality, units, props.envParams]);
 
   const nav: SettingsNav = useMemo(() => {
     const clamp = (f: number) => Math.max(0, Math.min(items.length - 1, f));
@@ -333,7 +333,7 @@ function SettingsMenuInner(props: {
         <div style={{ fontSize: 18, fontWeight: 700, color: '#a9d3e8', marginBottom: 12 }}>
           {t('settings_title')}
           <span style={{ float: 'right', fontSize: 12, color: '#5b93ab', fontWeight: 400 }}>
-            ↑↓ 选择 · ←→ 调节 · A/Enter 确认 · B/Esc 返回
+            {t('settings_nav_hint')}
           </span>
         </div>
         <div style={{ display: 'flex', gap: 6, marginBottom: 14 }}>

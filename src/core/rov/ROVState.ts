@@ -54,21 +54,10 @@ export interface HudSnapshot {
   temperatureC: number;
   /** 供迷你姿态模型使用（四元数） */
   attitude: ROVSnapshot['quaternion'];
+  /** 脐带缆缠绕圈数（0 = 未缠绕） */
+  tetherWrapTurns: number;
+  /** 脐带缆张力 N */
+  tetherTension: number;
   /** POV 定距声纳（6 向测距，5Hz 更新） */
   distanceSonar?: DistanceReadings;
-}
-
-export function createStaticSnapshot(lightsOn = false): ROVSnapshot {
-  return {
-    position: { x: 0, y: -8, z: 0 },
-    quaternion: { x: 0, y: 0, z: 0, w: 1 },
-    euler: { roll: 0, pitch: 0, yaw: 0 },
-    velocityWorld: { x: 0, y: 0, z: 0 },
-    speedKnots: 0,
-    depthMeters: 8,
-    headingDeg: 0,
-    thrusterCommands: new Array(8).fill(0),
-    lightsOn,
-    attitudeHoldActive: false,
-  };
 }

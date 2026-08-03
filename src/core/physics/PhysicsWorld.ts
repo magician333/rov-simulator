@@ -12,8 +12,9 @@ import { WaterForces } from './WaterForces';
 import { ThrusterAllocator } from './ThrusterAllocator';
 import { CurrentField, type LocalFlowZone } from '../environment/CurrentField';
 import { resolveCollisions, type ColliderShape } from './Collider';
+import { Tether } from './Tether';
 import { ROVController, EMPTY_INPUT, type ControlInput } from '../rov/ROVController';
-import { integrateLinear, integrateQuaternion } from './integrator';
+import { integrateLinear, integrateQuaternion, FIXED_DT } from './integrator';
 
 export interface PhysicsStepResult {
   /** 各推进器归一化指令 -1..1（渲染动画） */
@@ -24,6 +25,8 @@ export interface PhysicsStepResult {
 
 /** 水面（世界 Y=0 为海面，ROV 不允许高于水面） */
 export const WATER_SURFACE_Y = 0;
+/** DVL 悬停速度阻尼（固定步长常量） */
+const DVL_DAMP = Math.exp(-FIXED_DT * 3);
 
 export class PhysicsWorld {
   readonly body: RigidBody6;
@@ -48,6 +51,8 @@ export class PhysicsWorld {
   private readonly rovRadius: number;
   /** 场景碰撞体（场景加载时注册） */
   private colliders: ColliderShape[] = [];
+  /** 脐带缆（浮力线） */
+  readonly tether = new Tether();
 
   constructor(config: ROVConfig, env: EnvironmentState) {
     this.body = new RigidBody6(config);
@@ -63,6 +68,16 @@ export class PhysicsWorld {
   /** 注册场景碰撞体（场景切换时替换） */
   setSceneColliders(colliders: ColliderShape[]): void {
     this.colliders = colliders;
+  }
+
+  /** 启用/关闭浮力线 */
+  setTetherEnabled(on: boolean): void {
+    this.tether.enabled = on;
+  }
+
+  /** 设置水面锚点（场景切换时调用） */
+  setTetherAnchor(anchor: THREE.Vector3, slack?: number): void {
+    this.tether.reset(anchor, slack);
   }
 
   get controllerRef(): ROVController {
@@ -109,14 +124,19 @@ export class PhysicsWorld {
     // 5) 水力（重力/浮力/阻尼）累加
     this.water.compute(this.body, this.currentWorld, this.fBody, this.tauBody);
 
+    // 5.5) 脐带缆：张力 + 缠绕力矩
+    this.tether.step(this.body.position, this.body.omegaBody.y);
+
     // 6) 积分
     // 平动：F_world = R·F_body；a = F/m
     this.invQuat.copy(this.body.quaternion).invert();
     this.fWorld.copy(this.fBody).applyQuaternion(this.body.quaternion);
+    if (this.tether.forceOut.lengthSq() > 1e-8) this.fWorld.add(this.tether.forceOut);
     const accelWorld = this.fWorld.divideScalar(this.body.config.massKg);
     integrateLinear(this.body.position, this.body.velocityWorld, accelWorld, dt);
 
-    // 转动：α = I⁻¹(τ - ω×Iω)
+    // 转动：α = I⁻¹(τ - ω×Iω)（含缆绳缠绕阻尼）
+    if (this.tether.torqueY !== 0) this.tauBody.y += this.tether.torqueY;
     const alpha = this.body.angularAcceleration(this.tauBody);
     this.body.omegaBody.addScaledVector(alpha, dt);
     integrateQuaternion(this.body.quaternion, this.body.omegaBody, dt);
@@ -137,8 +157,7 @@ export class PhysicsWorld {
         this.body.velocityWorld.x += (this.dvlAnchor.x - this.body.position.x) * k * dt;
         this.body.velocityWorld.z += (this.dvlAnchor.z - this.body.position.z) * k * dt;
         this.body.velocityWorld.y += (this.dvlAnchor.y - this.body.position.y) * k * dt;
-        const damp = Math.exp(-dt * 3);
-        this.body.velocityWorld.multiplyScalar(damp);
+        this.body.velocityWorld.multiplyScalar(DVL_DAMP);
       } else {
         this.dvlActive = false;
       }

@@ -75,7 +75,7 @@ function MainPage({ onRecords }: { onRecords: () => void }) {
               <div style={styles.cardTitle}>{t('scene_' + s.id + '_name' as DictKey)}</div>
               <div style={styles.cardDesc}>{t('scene_' + s.id + '_desc' as DictKey)}</div>
               <div style={styles.cardMeta}>
-                {t('menu_default_task')}：{t('task_' + s.id + '_name' as DictKey)}
+                {t('menu_default_task')}: {t('task_' + s.id + '_name' as DictKey)}
               </div>
             </button>
           ))}
@@ -135,7 +135,7 @@ function RecordsPage({ onBack }: { onBack: () => void }) {
             <tbody>
               {records.map((r) => (
                 <tr key={r.id} style={{ color: '#d7eef8' }}>
-                  <td style={td}>{new Date(r.date).toLocaleString('zh-CN')}</td>
+                  <td style={td}>{new Date(r.date).toLocaleString(language === 'zh' ? 'zh-CN' : language === 'es' ? 'es-ES' : 'en-US')}</td>
                   <td style={td}>{t('scene_' + r.sceneId + '_name' as DictKey)}</td>
                   <td style={td}>{r.taskId}</td>
                   <td style={td}>{r.completed ? '✅ ' + t('records_ok') : '❌ ' + t('records_fail')}</td>

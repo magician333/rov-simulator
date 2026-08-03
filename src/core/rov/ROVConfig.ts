@@ -165,8 +165,8 @@ export const DEFAULT_ROV_CONFIG: ROVConfig = {
  * 模型：代码生成（visualVariant 'm2'）
  */
 export const CHASING_M2_CONFIG: ROVConfig = {
-  id: 'chasing_m2',
-  name: 'CHASING M2',
+  id: 'chasing_m2s',
+  name: 'CHASING M2 S',
   description: '紧凑作业型 ROV（M2 风格），8 推进器六自由度，带机械臂',
   model: { type: 'generated' },
   visualVariant: 'm2',

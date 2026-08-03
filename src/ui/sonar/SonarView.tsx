@@ -19,6 +19,7 @@ import {
 import type { Engine } from '../../render/Engine';
 import { useAppStore } from '../../state/store';
 import { tr, type DictKey } from '../../i18n';
+import { fmtDepth } from '../../utils/unitsUI';
 import { deg2rad } from '../../utils/units';
 
 type Palette = 'fire' | 'cool' | 'gray';
@@ -34,6 +35,21 @@ function applyPalette(v: number, palette: Palette): [number, number, number] {
   return [v, v, v];
 }
 
+/** 航向/深度只读行（独立订阅 hud，避免整棵 SonarView 每 100ms 重渲染） */
+function MetaReadout(): React.JSX.Element {
+  const language = useAppStore((s) => s.language);
+  const units = useAppStore((s) => s.units);
+  const hud = useAppStore((s) => s.hud);
+  const t = (k: DictKey) => tr(language, k);
+  return (
+    <span style={styles.meta}>
+      {t('sonar_meta_heading')} {hud ? Math.round(hud.headingDeg) : '—'}° · {t('sonar_meta_depth')}{' '}
+      {hud ? fmtDepth(hud.depthMeters, units) : '—'}
+      {units === 'imperial' ? 'ft' : 'm'}
+    </span>
+  );
+}
+
 export function SonarView({ engineRef }: { engineRef: React.MutableRefObject<Engine | null> }) {
   const language = useAppStore((s) => s.language);
   const t = (k: DictKey, vars?: Record<string, string | number>) => tr(language, k, vars);
@@ -47,7 +63,6 @@ export function SonarView({ engineRef }: { engineRef: React.MutableRefObject<Eng
   const [showControls, setShowControls] = useState(false);
   const [pos, setPos] = useState<{ x: number; y: number } | null>(null);
   const dragRef = useRef<{ startX: number; startY: number; baseX: number; baseY: number } | null>(null);
-  const hud = useAppStore((s) => s.hud);
 
   const paramsRef = useRef(params);
   const paletteRef = useRef(palette);
@@ -104,7 +119,7 @@ export function SonarView({ engineRef }: { engineRef: React.MutableRefObject<Eng
         const third = Math.max(1, Math.ceil(total / 3));
         const startBeam = (frameCounter % 3) * third;
         const count = Math.min(third, total - startBeam);
-        const beams = sampler0.sample(pos, yaw, startBeam, count);
+        const beams = sampler0.sample(pos, yaw, startBeam, count, { pitchRad: deg2rad(snap.euler.pitch), rollRad: deg2rad(snap.euler.roll) });
         simulator.renderFrame(beams, startBeam, { turbidity: env.turbidity, visibility: env.visibility });
         frameCounter++;
       }
@@ -154,10 +169,8 @@ export function SonarView({ engineRef }: { engineRef: React.MutableRefObject<Eng
         onPointerUp={onDragEnd}
         onPointerCancel={onDragEnd}
       >
-        <span style={styles.title}>SONAR {freq === 'low' ? t('sonar_freq_low') : '高频'}·{params.rangeM}m</span>
-        <span style={styles.meta}>
-          航向 {hud ? Math.round(hud.headingDeg) : '—'}° · 深度 {hud ? hud.depthMeters.toFixed(1) : '—'}m
-        </span>
+        <span style={styles.title}>SONAR {t(freq === 'low' ? 'sonar_freq_low' : 'sonar_freq_high')}·{params.rangeM}m</span>
+        <MetaReadout />
         <button onClick={() => switchFreq(freq === 'low' ? 'high' : 'low')} style={styles.btn}>
           {freq === 'low' ? t('sonar_switch_to_high') : t('sonar_switch_to_low')}
         </button>
@@ -233,7 +246,9 @@ function drawSonar(
   if (!brightBuf || brightBuf.length !== W * H) brightBuf = new Uint8ClampedArray(W * H);
   brightBuf.fill(0);
 
-  // 1) 写入亮度：底噪稀疏点、回波全亮
+  // 1+2) 写入亮度 + 调色板映射（单次遍历，复用 ImageData）
+  if (!imageDataBuf || imageDataBuf.width !== W || imageDataBuf.height !== H) imageDataBuf = ctx.createImageData(W, H);
+  const data = imageDataBuf.data;
   for (let py = 0; py < H; py++) {
     const dy = py - cy;
     for (let px = 0; px < W; px++) {
@@ -250,29 +265,23 @@ function drawSonar(
       const beam = Math.min(beamCount - 1, Math.max(0, beamCount - 1 - beamRaw));
       const v = image[beam * rangeBins + bin] ?? 0;
       const idx = py * W + px;
+      let finalV: number;
       if (v < 40) {
         if (rnd() > 0.18) continue; // 底噪 18% 稀疏点
-        brightBuf[idx] = v * 0.7;
+        finalV = v * 0.7;
       } else {
-        brightBuf[idx] = Math.min(255, v); // 回波全亮
+        finalV = Math.min(255, v); // 回波全亮
       }
+      if (finalV <= 1) continue;
+      const [rr, gg, bb] = applyPalette(finalV, palette);
+      const o = idx * 4;
+      data[o] = rr;
+      data[o + 1] = gg;
+      data[o + 2] = bb;
+      data[o + 3] = 255;
     }
   }
-
-  // 2) 调色板映射
-  const imgData = ctx.createImageData(W, H);
-  const data = imgData.data;
-  for (let i = 0; i < W * H; i++) {
-    const v = brightBuf[i];
-    if (v <= 1) continue;
-    const [rr, gg, bb] = applyPalette(v, palette);
-    const o = i * 4;
-    data[o] = rr;
-    data[o + 1] = gg;
-    data[o + 2] = bb;
-    data[o + 3] = 255;
-  }
-  ctx.putImageData(imgData, 0, 0);
+  ctx.putImageData(imageDataBuf, 0, 0);
 
   // 3) 叠加层：扇面边界、距离环、刻度
   ctx.strokeStyle = 'rgba(120, 200, 220, 0.5)';
@@ -303,11 +312,12 @@ function drawSonar(
   ctx.fill();
   ctx.fillStyle = 'rgba(120, 200, 220, 0.7)';
   ctx.font = '11px Consolas, monospace';
-  ctx.fillText(`${beamCount} 波束 · ${rangeBins} bin · ${p.sectorDeg}°`, 8, H - 8);
+  ctx.fillText(`beam ×${beamCount} · bin ×${rangeBins} · ${p.sectorDeg}°`, 8, H - 8);
 }
 
-/** 亮度 buffer 缓存（避免每帧分配） */
+/** 亮度 buffer / ImageData 缓存（避免每帧分配） */
 let brightBuf: Uint8ClampedArray | null = null;
+let imageDataBuf: ImageData | null = null;
 
 const styles: Record<string, React.CSSProperties> = {
   root: {
