@@ -165,3 +165,8 @@ Chronological record of the project, milestones and key decisions. Useful for on
 - M2S pitch/roll torque scale 16× → 32× (roll 2 s ≈ 108°, maxed by damping).
 - M2S: removed top torus carry rings; replaced stand-alone side frames with **square plastic handles nested on the side upper/lower frame tubes** (4 blocks, slightly thicker than the tube, at ±X/±Y frame rails).
 - M2S frame tubes slimmed r 0.038 → 0.02 (thin plastic skeleton).
+
+## M21b — Angular velocity clamp (M2S 32× stability)
+
+- 32× torque alone made the semi-implicit Euler diverge (roll read 0). Added a global angular-velocity clamp (MAX_ANGULAR_SPEED = 2.2 rad/s) after integration.
+- M2S 32× roll 2 s now ≈ 182° (vs 103° at 16×) and numerically stable (no NaN over 5 s); generic ROV unaffected (its normal rates are far below the cap).

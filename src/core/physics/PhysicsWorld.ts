@@ -27,6 +27,8 @@ export interface PhysicsStepResult {
 export const WATER_SURFACE_Y = 0;
 /** DVL 悬停速度阻尼（固定步长常量） */
 const DVL_DAMP = Math.exp(-FIXED_DT * 3);
+/** 角速度上限（rad/s）：防止超大转动力矩（如 M2S 32×）在半隐式欧拉下数值发散 */
+const MAX_ANGULAR_SPEED = 2.2;
 
 export class PhysicsWorld {
   readonly body: RigidBody6;
@@ -181,9 +183,13 @@ export class PhysicsWorld {
     const accelWorld = this.fWorld.divideScalar(this.body.config.massKg);
     integrateLinear(this.body.position, this.body.velocityWorld, accelWorld, dt);
 
-    // 转动：α = I⁻¹(τ - ω×Iω)
+    // 转动：α = I⁻¹(τ - ω×Iω)；角速度钳制防发散（大力矩机型数值稳定）
     const alpha = this.body.angularAcceleration(this.tauBody);
     this.body.omegaBody.addScaledVector(alpha, dt);
+    const w2 = this.body.omegaBody.lengthSq();
+    if (w2 > MAX_ANGULAR_SPEED * MAX_ANGULAR_SPEED && w2 > 0) {
+      this.body.omegaBody.multiplyScalar(MAX_ANGULAR_SPEED / Math.sqrt(w2));
+    }
     integrateQuaternion(this.body.quaternion, this.body.omegaBody, dt);
 
     // 姿态角限制（通用 ROV：俯仰 ±60°、横滚 ±45°）
