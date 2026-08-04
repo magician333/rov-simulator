@@ -57,12 +57,12 @@ export class GeneratedROVModel {
 
   private initMaterials(): void {
     if (this.variant === 'm2') {
-      // CHASING M2 参考：紧凑黑色箱式 + 黄色浮力块
-      this.matFrame = new THREE.MeshStandardMaterial({ color: 0x23262b, roughness: 0.5, metalness: 0.55, map: getTexture('deepmetal') });
+      // CHASING M2 参考：浅灰外框（铝管/箱体）+ 亮黄电机（导管+转子）
+      this.matFrame = new THREE.MeshStandardMaterial({ color: 0xb8bec4, roughness: 0.5, metalness: 0.55, map: getTexture('deepmetal') });
       this.matBuoyancy = new THREE.MeshStandardMaterial({ color: 0xf2c94c, roughness: 0.55, metalness: 0.15 });
-      this.matHull = new THREE.MeshStandardMaterial({ color: 0x2b2d31, roughness: 0.45, metalness: 0.6, map: getTexture('deepmetal') });
-      this.matDuct = new THREE.MeshStandardMaterial({ color: 0x3a3d42, roughness: 0.45, metalness: 0.55 });
-      this.matRotor = new THREE.MeshStandardMaterial({ color: 0x9aa0a6, roughness: 0.35, metalness: 0.65 });
+      this.matHull = new THREE.MeshStandardMaterial({ color: 0xb8bec4, roughness: 0.45, metalness: 0.6, map: getTexture('deepmetal') });
+      this.matDuct = new THREE.MeshStandardMaterial({ color: 0xffc400, roughness: 0.4, metalness: 0.45 });
+      this.matRotor = new THREE.MeshStandardMaterial({ color: 0xffe600, roughness: 0.3, metalness: 0.5 });
       this.matArm = new THREE.MeshStandardMaterial({ color: 0x8d9096, roughness: 0.45, metalness: 0.6 });
       this.matGripper = new THREE.MeshStandardMaterial({ color: 0xf2c94c, roughness: 0.5, metalness: 0.3 });
     } else {

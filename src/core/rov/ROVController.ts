@@ -49,7 +49,7 @@ export type AxisMode = 'body' | 'world';
 export class ROVController {
   /** 平动最大力（N）——由推进器能力推导 */
   private readonly fMax = { surge: 0, sway: 0, heave: 0 };
-  /** 转动最大力矩（N·m）——调小更温和，配合增强角阻尼 */
+  /** 转动最大力矩（N·m，按机型 torqueScale 缩放：M2S 俯仰/横滚 ×2） */
   private readonly tauMax = { yaw: 21, pitch: 17, roll: 14 };
 
   /** 当前航速上限对应的 surge 最大推力（按稳态阻力标定） */
@@ -79,6 +79,11 @@ export class ROVController {
   private readonly vTmp = new THREE.Vector3();
 
   constructor(private config: ROVConfig) {
+    // 机型转动响应缩放（默认 1）
+    const ts = config.torqueScale ?? {};
+    this.tauMax.yaw *= ts.yaw ?? 1;
+    this.tauMax.pitch *= ts.pitch ?? 1;
+    this.tauMax.roll *= ts.roll ?? 1;
     // surge/sway 由 4 个水平推进器组合；heave 由 4 个垂直推进器组合
     const hMax = Math.max(...config.thrusters.map((t) => t.maxForce));
     const vMax = Math.max(...config.thrusters.filter((t) => Math.abs(t.direction[1]) > 0.5).map((t) => t.maxForce));

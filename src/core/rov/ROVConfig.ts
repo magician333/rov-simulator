@@ -53,6 +53,8 @@ export interface ROVConfig {
   model: ROVModelSpec;
   /** 代码生成模型风格（gltf 机型忽略） */
   visualVariant?: 'standard' | 'm2';
+  /** 转动响应缩放（1=默认；如 M2S 俯仰/横滚 ×2） */
+  torqueScale?: { yaw?: number; pitch?: number; roll?: number };
   /** 最大前进航速（节） */
   maxSpeedKnots: number;
   /** 最大侧向航速（节，可选；缺省 = maxSpeedKnots） */
@@ -171,6 +173,8 @@ export const CHASING_M2_CONFIG: ROVConfig = {
   model: { type: 'generated' },
   visualVariant: 'm2',
   maxSpeedKnots: 3,
+  // 俯仰/横滚灵活性 +100%（转动响应 ×2，更轻盈）
+  torqueScale: { yaw: 1, pitch: 2, roll: 2 },
   maxSwaySpeedKnots: 1.5,
   maxHeaveSpeedKnots: 1.5,
   massKg: 30,

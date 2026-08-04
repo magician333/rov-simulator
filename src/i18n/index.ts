@@ -201,7 +201,7 @@ const ZH = {
   // 机型名/描述
   rov_rov_6dof_standard_name: '通用 6 自由度 ROV',
   rov_rov_6dof_standard_desc: '标准 8 推进器矢量布局，可独立控制全部六个自由度。',
-  rov_chasing_m2s_name: 'CHASING M2 S',
+  rov_chasing_m2s_name: '潜鲛P100 S',
   rov_chasing_m2s_desc: '紧凑作业型 ROV（M2 风格），8 推进器六自由度，带机械臂',
   // 声纳面板
   sonar_freq_high: '高频',
@@ -215,6 +215,10 @@ const ZH = {
   hint_unlock_first: '请先解锁电机后再操作',
   help_motor: '解锁/加锁电机（短按）；长按动作',
   help_tab_keys: '键盘',
+  help_guide: '① 进入训练后短按空格 / 手柄 A 解锁电机（锁定状态无动力，ROV 会被浮力推回水面）\n② 解锁后无操作会自动悬停保持位置；推动摇杆/按键开始航行\n③ 靠近目标后：X 抓取道具，长按空格完成打捞/检查等动作\n④ 按 I 或手柄 Back 打开声纳辅助导航，长按 Back 切换高低频',
+  help_sec_motion: '—— 移动与视角 ——',
+  help_sec_work: '—— 作业与功能 ——',
+
   help_tab_pad: '手柄',
   help_pad_lstick: '前后 / 旋转',
   help_pad_rstick: '平移 / 升降',
@@ -483,6 +487,10 @@ const EN: Record<keyof typeof ZH, string> = {
   hint_unlock_first: 'Unlock motors first',
   help_motor: 'Unlock/Lock motors (tap); hold = action',
   help_tab_keys: 'Keyboard',
+  help_guide: '① Tap Space / gamepad A to unlock motors (locked = no thrust, ROV drifts up)\n② When unlocked and idle the vehicle hovers in place; push sticks / keys to navigate\n③ Near a target: X grabs items, hold Space performs salvage/inspection\n④ I or gamepad Back opens sonar; hold Back to switch high/low frequency',
+  help_sec_motion: '—— Movement & view ——',
+  help_sec_work: '—— Work & features ——',
+
   help_tab_pad: 'Gamepad',
   help_pad_lstick: 'Forward / turn',
   help_pad_rstick: 'Strafe / up-down',
@@ -746,6 +754,10 @@ const ES: Record<keyof typeof ZH, string> = {
   hint_unlock_first: 'Desbloquea los motores primero',
   help_motor: 'Desbloquear/Bloquear motores (toque); mantener = acción',
   help_tab_keys: 'Teclado',
+  help_guide: '① Toca Espacio / A para desbloquear motores (bloqueado = sin empuje, el ROV flota hacia arriba)\n② Desbloqueado y en reposo se mantiene flotando; usa sticks / teclas para navegar\n③ Cerca del objetivo: X agarra, mantener Espacio realiza el trabajo\n④ I o Back abre el sonar; mantener Back cambia alta/baja frecuencia',
+  help_sec_motion: '—— Movimiento y vista ——',
+  help_sec_work: '—— Trabajo y funciones ——',
+
   help_tab_pad: 'Mando',
   help_pad_lstick: 'Avance / giro',
   help_pad_rstick: 'Desplazamiento / subir-bajar',

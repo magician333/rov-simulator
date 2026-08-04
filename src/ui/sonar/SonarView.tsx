@@ -80,8 +80,11 @@ export function SonarView({ engineRef }: { engineRef: React.MutableRefObject<Eng
   // 频率切换：低频 = 远程低分辨率；高频 = 近程高分辨率
   const switchFreq = (mode: SonarFreqMode) => {
     setSonarFreq(mode);
-    setParams((p) => ({ ...FREQ_PRESETS[mode], gain: p.gain, noise: p.noise }));
   };
+  // 频段变化 → 应用预设参数（键盘/手柄 Back 长按与面板按钮统一生效）
+  useEffect(() => {
+    setParams((p) => ({ ...FREQ_PRESETS[freq], gain: p.gain, noise: p.noise }));
+  }, [freq]);
 
   useEffect(() => {
     const engine = engineRef.current;

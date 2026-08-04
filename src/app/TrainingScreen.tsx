@@ -392,8 +392,11 @@ export function TrainingScreen() {
         if (Date.now() - backStart < 400) {
           useAppStore.getState().setSonarVisible(!useAppStore.getState().sonarVisible);
         } else {
-          const cur = useAppStore.getState().sonarFreq;
-          useAppStore.getState().setSonarFreq(cur === 'high' ? 'low' : 'high');
+          // 长按切频仅在声纳开启时生效
+          if (useAppStore.getState().sonarVisible) {
+            const cur = useAppStore.getState().sonarFreq;
+            useAppStore.getState().setSonarFreq(cur === 'high' ? 'low' : 'high');
+          }
         }
       }
       for (let i = 0; i < 16; i++) prevBtns[i] = b(i);
@@ -840,8 +843,22 @@ function HelpPanel({ t, onClose }: { t: (k: DictKey, vars?: Record<string, strin
         {tabBtn('keys', '⌨ ' + t('help_tab_keys'))}
         {tabBtn('pad', '🎮 ' + t('help_tab_pad'))}
       </div>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-        {rows.map(([k, d]) => (
+      {/* 新手引导：起步流程 */}
+      <div style={{ fontSize: 11, color: '#8fd3f0', lineHeight: 1.7, marginBottom: 10, padding: '8px 10px', background: 'rgba(79,195,247,0.08)', borderRadius: 8 }}>
+        {t('help_guide')}
+      </div>
+      {tab === 'keys' && <div style={{ fontSize: 11, color: '#6f9db5', marginBottom: 6 }}>{t('help_sec_motion')}</div>}
+      {tab === 'keys' && <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginBottom: 8 }}>
+        {rows.slice(0, 5).map(([k, d]) => (
+          <div key={k} style={{ display: 'flex', justifyContent: 'space-between', gap: 10, fontSize: 12 }}>
+            <span style={{ color: '#4fc3f7', fontFamily: 'Consolas, monospace', fontWeight: 600, whiteSpace: 'nowrap' }}>{k}</span>
+            <span style={{ color: '#9cc5d9', textAlign: 'right' }}>{d}</span>
+          </div>
+        ))}
+      </div>}
+      {tab === 'keys' && <div style={{ fontSize: 11, color: '#6f9db5', marginBottom: 6 }}>{t('help_sec_work')}</div>}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+        {rows.slice(tab === 'keys' ? 5 : 0).map(([k, d]) => (
           <div key={k} style={{ display: 'flex', justifyContent: 'space-between', gap: 10, fontSize: 12 }}>
             <span style={{ color: '#4fc3f7', fontFamily: 'Consolas, monospace', fontWeight: 600, whiteSpace: 'nowrap' }}>{k}</span>
             <span style={{ color: '#9cc5d9', textAlign: 'right' }}>{d}</span>
@@ -911,7 +928,7 @@ const styles: Record<string, React.CSSProperties> = {
     letterSpacing: 1,
   },
   helpPanelStyle: {
-    position: 'absolute', top: 56, right: 12, zIndex: 15, width: 330,
+    position: 'absolute', top: 56, right: 12, zIndex: 260, width: 330,
     background: 'rgba(4, 18, 26, 0.9)', border: '1px solid #1a4a63',
     borderRadius: 10, padding: 14, color: '#d7eef8',
   },
