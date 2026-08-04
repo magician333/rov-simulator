@@ -445,3 +445,11 @@
 - 修复：Ix 惯性矩（h²+l²）、reset 清输入/取消水平、ship 任务 check 拆分、转子定向 group、GLTF 竞态守卫、Engine dispose（env/ROV/tether）、SonarView i18n+MetaReadout、handleRestart 本地化、fmtTemp toFixed
 - 性能：integrator 临时复用、allocator 缓冲复用、WaterForces 半阻尼常量、限速 sqrt 缓存、drawSonar 单遍+ImageData 复用、Compass memo、水面隔帧、死代码/key 清理、migrate v5
 - 回归：build/smoke/dev 全通过；文档同步；待 commit+push
+
+## 本轮（手柄/夹爪/声纳/电机锁/浮力线清理）
+- 十字键反转（上=低头、下=抬头、右=左倾、左=右倾）；LB/RB 夹爪开合；LT/RT 空置
+- 夹爪改绕 Y 左右张开 + 细爪
+- 声纳：子射线 5 条 + 回波去重（消除三道弧线假回波）；分帧 3→6；targets 刷新 20→6；每次进入场景默认关声纳
+- 电机锁系统：默认锁定（无动力上浮）；空格/A 短按解锁/加锁；解锁 idle 悬停（净浮力补偿+阻尼）保持位置；状态栏加粗显示+角落显示；锁定输入提示；帮助/i18n/README 同步
+- 浮力线彻底删除（Tether.ts 及全部引用，bundle -4.3kB gzip）
+- 验证：locked 3s 上浮 9.80m；unlocked 3s/6s 保持 10.00m @0kn

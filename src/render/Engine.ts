@@ -170,77 +170,18 @@ export class Engine {
   onGripperWheel: ((deltaY: number) => void) | null = null;
 
   /** 加载作业场景（构建 + 局部流区 + 环境默认值 + 重置 ROV 到出生点） */
-  /** 创建/复用脐带缆视觉（细分段黄色线缆，从 ROV 顶部连到水面锚点；不设水面浮标） */
-  private ensureTetherVisual(): void {
-    if (this.tetherLine) this.scene.remove(this.tetherLine);
-    const curve = new THREE.CatmullRomCurve3([
-      new THREE.Vector3(0, -1.2, 0),
-      new THREE.Vector3(0, -0.6, 0),
-      new THREE.Vector3(0, 0.02, 0),
-    ]);
-    // 高细分黄色脐带缆（48 段，线缆弯曲平滑如真实线缆）
-    this.tetherLine = new THREE.Mesh(
-      new THREE.TubeGeometry(curve, 48, 0.022, 8, false),
-      new THREE.MeshStandardMaterial({ color: 0xFFE800, roughness: 0.5, metalness: 0.1 }),
-    );
-    this.tetherLine.userData.sonarExclude = true; // 缆绳不产生声纳回波
-    this.scene.add(this.tetherLine);
-  }
 
-  /** 移除脐带缆视觉（关闭浮力线 / 场景切换），释放几何与材质 */
-  private removeTetherVisual(): void {
-    if (this.tetherLine) {
-      this.scene.remove(this.tetherLine);
-      this.tetherLine.geometry.dispose();
-      (this.tetherLine.material as THREE.Material).dispose();
-      this.tetherLine = null;
-    }
-  }
-
-  /** 每帧更新缆绳曲线（ROV 顶部 → 下凹 → 水面锚点，细分 48 段） */
-  private lastTetherPos: THREE.Vector3 | null = null;
-
-  private updateTetherVisual(
-    rovPos: { x: number; y: number; z: number },
-    quat?: { x: number; y: number; z: number; w: number },
-  ): void {
-    if (!this.tetherLine || !this.simulation) return;
-    const anchor = this.simulation.getTetherAnchor();
-    if (!anchor) return;
-    // 位移/锚点变化超过阈值才重建几何（避免每帧 GPU 重建）
-    if (this.lastTetherPos && this.lastTetherPos.distanceToSquared(new THREE.Vector3(rovPos.x, rovPos.y, rovPos.z)) < 0.09) return;
-    this.lastTetherPos?.set(rovPos.x, rovPos.y, rovPos.z);
-    // 缆绳从 ROV 顶部中间出（顶部点随俯仰/横滚姿态旋转），自然下垂后到达水面锚点
-    const rovTop = quat
-      ? new THREE.Vector3(0, 0.22, 0)
-          .applyQuaternion(new THREE.Quaternion(quat.x, quat.y, quat.z, quat.w))
-          .add(new THREE.Vector3(rovPos.x, rovPos.y, rovPos.z))
-      : new THREE.Vector3(rovPos.x, rovPos.y + 0.22, rovPos.z);
-    const mid = new THREE.Vector3(
-      (anchor.x + rovTop.x) / 2,
-      Math.min(anchor.y, rovTop.y) - 1.2,
-      (anchor.z + rovTop.z) / 2,
-    );
-    const curve = new THREE.CatmullRomCurve3([rovTop, mid, anchor]);
-    const oldGeo = this.tetherLine.geometry;
-    this.tetherLine.geometry = new THREE.TubeGeometry(curve, 48, 0.022, 8, false);
-    oldGeo.dispose();
-  }
 
   loadScene(sceneId: string): SceneDefinition | null {
     const def = getScene(sceneId);
     if (!def) return null;
     this.sceneManager.load(def);
-    if (useAppStore.getState().tetherEnabled) this.ensureTetherVisual();
-    else this.removeTetherVisual();
     this.simulation?.environment.reset(def.environmentDefaults);
     this.simulation?.setSceneColliders(def.colliders ?? []);
     this.simulation?.reset({
       position: new THREE.Vector3(...def.spawn.position),
       yawDeg: def.spawn.yawDeg,
     });
-    // 脐带缆锚点 = 出生点上方水面；松弛长度按场景尺寸给足（默认 60m）
-    this.simulation?.setTether([def.spawn.position[0], def.spawn.position[2]], 60);
     // 机械臂仅打捞场景挂载
     this.rov?.setArmVisible?.(sceneId === 'salvage');
     const s = this.simulation?.getRenderSnapshot();
@@ -348,7 +289,6 @@ export class Engine {
     if (this.simulation && this.rov) {
       snap = this.simulation.getRenderSnapshot();
       this.rov.root.position.set(snap.position.x, snap.position.y, snap.position.z);
-      this.updateTetherVisual(snap.position, snap.quaternion);
       this.rov.root.quaternion.set(snap.quaternion.x, snap.quaternion.y, snap.quaternion.z, snap.quaternion.w);
       this.rov.setLightsOn(snap.lightsOn);
       // 光锥仅第一视角（POV）可见；第三视角隐藏
@@ -377,7 +317,6 @@ export class Engine {
 
   private quality: QualityLevel = 'medium';
   /** 脐带缆渲染：浮标 + 缆绳线 */
-  private tetherLine: THREE.Mesh | null = null;
 
   /** 水面（y=0）：半透明蓝绿面 + 涟漪顶点动画（与天空亮蓝区分） */
   private waterMesh: THREE.Mesh | null = null;

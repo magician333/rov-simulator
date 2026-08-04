@@ -283,25 +283,26 @@ export class GeneratedROVModel {
     fore.rotation.x = 0.5;
     arm.add(fore);
 
-    // 可动夹爪：弧形钳口（半圆管）+ 黑色指端，开口可见（绕 Z 开合）
+    // 可动夹爪：细长弧形钳口（半圆管）+ 细指端，开口清晰可见（绕 Z 开合）
     const fingerTipMat = new THREE.MeshStandardMaterial({ color: 0x1c1e22, roughness: 0.4 });
     const mkFinger = () => {
       const g = new THREE.Group();
-      const arc = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.07, 0.24, 24, 1, true, 0, Math.PI), this.matGripper);
+      // 细钳口：半径减半、长度加长，两爪贴近时缝隙可见
+      const arc = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, 0.36, 12, 1, true, 0, Math.PI), this.matGripper);
       arc.rotation.x = Math.PI / 2;
       g.add(arc);
-      const tip = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.05, 0.18), fingerTipMat);
-      tip.position.set(0, 0.075, 0);
+      const tip = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.03, 0.22), fingerTipMat);
+      tip.position.set(0, 0.035, 0);
       g.add(tip);
       return g;
     };
     const jawL = new THREE.Group();
     jawL.add(mkFinger());
-    jawL.position.set(-0.05, -0.32, -1.12);
+    jawL.position.set(-0.03, -0.32, -1.12);
     jawL.rotation.x = 0.3;
     const jawR = new THREE.Group();
     jawR.add(mkFinger());
-    jawR.position.set(0.05, -0.32, -1.12);
+    jawR.position.set(0.03, -0.32, -1.12);
     jawR.rotation.x = 0.3;
     arm.add(jawL, jawR);
     this.jawL = jawL;
@@ -350,12 +351,12 @@ export class GeneratedROVModel {
     if (this.armGroup) this.armGroup.visible = visible;
   }
 
-  /** 夹爪开合动画：open ∈ [0,1]（0=闭合，1=全开），连续张角（明显可见） */
+  /** 夹爪开合动画：open ∈ [0,1]（0=闭合，1=全开），两爪向左右两侧张开（绕 Y，明显可见） */
   setGripper(open: number): void {
     if (!this.jawL || !this.jawR) return;
-    const a = 0.1 + open * 0.6;
-    this.jawL.rotation.z = -a;
-    this.jawR.rotation.z = a;
+    const a = 0.15 + open * 0.7;
+    this.jawL.rotation.y = a;   // 左爪向外（+X 侧）张开
+    this.jawR.rotation.y = -a;  // 右爪向外（-X 侧）张开
   }
 
   setLightsOn(on: boolean): void {

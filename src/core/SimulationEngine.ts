@@ -38,6 +38,10 @@ export class SimulationEngine {
 
   private lightsOn: boolean;
   private accumulator = 0;
+  /** 电机锁定（默认锁定，需按空格/手柄 A 解锁） */
+  private motorLocked = true;
+  /** 解锁后无输入时推进器微转动画指令 */
+  private readonly hoverNorm: number[];
 
   private readonly euler = new THREE.Euler();
   private lastThrusterNorm: number[] = [];
@@ -50,6 +54,7 @@ export class SimulationEngine {
     this.startLightsOn = this.lightsOn;
     this.physics = new PhysicsWorld(cfg, this.environment);
     this.lastThrusterNorm = new Array(cfg.thrusters.length).fill(0);
+    this.hoverNorm = new Array(cfg.thrusters.length).fill(0.12);
 
     if (options.startPosition) {
       this.physics.setPose(options.startPosition.clone(), new THREE.Quaternion());
@@ -67,6 +72,7 @@ export class SimulationEngine {
     this.lastThrusterNorm.fill(0);
     this.clearControlInput();
     this.physics.controllerRef.cancelLevel();
+    this.motorLocked = true; // 每次重置/重开：电机锁定
   }
 
   /** 应用场景局部水流区（场景切换时） */
@@ -79,29 +85,19 @@ export class SimulationEngine {
     this.physics.setSceneColliders(colliders);
   }
 
-  /** 设置脐带缆（水面锚点 = 出生点上方；场景切换/重置调用） */
-  setTether(anchorXZ: [number, number], slack?: number): void {
-    this.physics.setTetherAnchor(new THREE.Vector3(anchorXZ[0], 0.02, anchorXZ[1]), slack);
-  }
-
-  /** 启用/关闭浮力线 */
-  setTetherEnabled(on: boolean): void {
-    this.physics.setTetherEnabled(on);
-  }
-
-  /** 脐带缆状态（供 HUD/UI） */
-  getTetherState(): { wrapTurns: number; tension: number } {
-    return { wrapTurns: this.physics.tether.wrapTurns, tension: this.physics.tether.tension };
-  }
-
-  /** 脐带缆锚点（渲染用） */
-  getTetherAnchor(): THREE.Vector3 {
-    return this.physics.tether.anchor;
-  }
-
   /** 开启/关闭 DVL */
   setDvl(on: boolean): void {
     this.physics.setDvl(on);
+  }
+
+  /** 电机加锁/解锁 */
+  setMotorLocked(locked: boolean): void {
+    this.motorLocked = locked;
+    this.physics.setMotorLocked(locked);
+  }
+
+  getMotorLocked(): boolean {
+    return this.motorLocked;
   }
 
   setLightsOn(on: boolean): void {
@@ -185,7 +181,12 @@ export class SimulationEngine {
       depthMeters: worldYToDepth(b.position.y),
       // 航向：yaw=0 → 前向 -Z（北）；yaw 正（逆时针）→ 西（航向 270），故取 360 - yawDeg
       headingDeg: normalizeHeading(360 - yawDeg),
-      thrusterCommands: this.lastThrusterNorm,
+      // 电机锁定 = 推进器停转；解锁无输入 = 微转悬停
+      thrusterCommands: this.motorLocked
+        ? this.lastThrusterNorm
+        : this.isIdleInputNow()
+          ? this.hoverNorm
+          : this.lastThrusterNorm,
       lightsOn: this.lightsOn,
       attitudeHoldActive: this.levelActive,
     };
@@ -202,9 +203,15 @@ export class SimulationEngine {
       rollDeg: s.euler.roll,
       temperatureC: this.environment.get().temperatureC,
       attitude: s.quaternion,
-      tetherWrapTurns: this.physics.tether.wrapTurns,
-      tetherTension: this.physics.tether.tension,
+      motorLocked: this.motorLocked,
     };
+  }
+
+  /** 当前是否无控制输入 */
+  private isIdleInputNow(): boolean {
+    const i = this.physics.input;
+    return Math.abs(i.surge) < 0.001 && Math.abs(i.sway) < 0.001 && Math.abs(i.heave) < 0.001 &&
+      Math.abs(i.yaw) < 0.001 && Math.abs(i.pitch) < 0.001 && Math.abs(i.roll) < 0.001;
   }
 
   /** 水流场采样（供渲染层展示水流方向等，可选） */

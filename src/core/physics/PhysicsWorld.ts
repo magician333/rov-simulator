@@ -12,9 +12,9 @@ import { WaterForces } from './WaterForces';
 import { ThrusterAllocator } from './ThrusterAllocator';
 import { CurrentField, type LocalFlowZone } from '../environment/CurrentField';
 import { resolveCollisions, type ColliderShape } from './Collider';
-import { Tether } from './Tether';
 import { ROVController, EMPTY_INPUT, type ControlInput } from '../rov/ROVController';
 import { integrateLinear, integrateQuaternion, FIXED_DT } from './integrator';
+import { SEAWATER_DENSITY, GRAVITY } from '../../utils/units';
 
 export interface PhysicsStepResult {
   /** 各推进器归一化指令 -1..1（渲染动画） */
@@ -51,8 +51,6 @@ export class PhysicsWorld {
   private readonly rovRadius: number;
   /** 场景碰撞体（场景加载时注册） */
   private colliders: ColliderShape[] = [];
-  /** 脐带缆（浮力线） */
-  readonly tether = new Tether();
 
   constructor(config: ROVConfig, env: EnvironmentState) {
     this.body = new RigidBody6(config);
@@ -63,6 +61,8 @@ export class PhysicsWorld {
     this.lastNorm = new Array(config.thrusters.length).fill(0);
     const { length, width, height } = config.dimensions;
     this.rovRadius = Math.sqrt(length * length + width * width + height * height) * 0.55;
+    // 解锁后悬停：抵消净浮力（ρgV - mg，正 = 上浮）
+    this.hoverCompY = -(SEAWATER_DENSITY * config.displacementM3 * GRAVITY - config.massKg * GRAVITY);
   }
 
   /** 注册场景碰撞体（场景切换时替换） */
@@ -70,14 +70,20 @@ export class PhysicsWorld {
     this.colliders = colliders;
   }
 
-  /** 启用/关闭浮力线 */
-  setTetherEnabled(on: boolean): void {
-    this.tether.enabled = on;
+  /** 电机加锁/解锁（锁定 = 推进器无动力） */
+  setMotorLocked(locked: boolean): void {
+    this.motorLocked = locked;
   }
 
-  /** 设置水面锚点（场景切换时调用） */
-  setTetherAnchor(anchor: THREE.Vector3, slack?: number): void {
-    this.tether.reset(anchor, slack);
+  getMotorLocked(): boolean {
+    return this.motorLocked;
+  }
+
+  /** 是否无控制输入（解锁后悬停判定） */
+  private isIdleInput(): boolean {
+    const i = this.input;
+    return Math.abs(i.surge) < 0.001 && Math.abs(i.sway) < 0.001 && Math.abs(i.heave) < 0.001 &&
+      Math.abs(i.yaw) < 0.001 && Math.abs(i.pitch) < 0.001 && Math.abs(i.roll) < 0.001;
   }
 
   get controllerRef(): ROVController {
@@ -87,6 +93,11 @@ export class PhysicsWorld {
   private dvlOn = false;
   private dvlAnchor = new THREE.Vector3();
   private dvlActive = false;
+
+  /** 电机锁定（默认锁定：启动需按空格/手柄 A 解锁） */
+  private motorLocked = true;
+  /** 解锁后悬停补偿力（世界系 Y，抵消净浮力保持当前位置） */
+  private readonly hoverCompY: number;
 
   /** 开启/关闭 DVL（多普勒测速）：悬停保持 + 洋流削弱 */
   setDvl(on: boolean): void {
@@ -110,8 +121,12 @@ export class PhysicsWorld {
     // 1) 控制指令 → 6DOF（体坐标系）
     this.controller.computeCmd6(this.input, this.body, this.cmd6);
 
-    // 2) 推进器分配
+    // 2) 推进器分配（电机锁定 = 无动力，推进器停转）
     const alloc = this.allocator.allocate(this.cmd6);
+    if (this.motorLocked) {
+      alloc.thrust.fill(0);
+      alloc.norm.fill(0);
+    }
     this.lastNorm = alloc.norm;
 
     // 3) 合力（体坐标系）：推进器 + 水力
@@ -124,19 +139,20 @@ export class PhysicsWorld {
     // 5) 水力（重力/浮力/阻尼）累加
     this.water.compute(this.body, this.currentWorld, this.fBody, this.tauBody);
 
-    // 5.5) 脐带缆：张力 + 缠绕力矩
-    this.tether.step(this.body.position, this.body.omegaBody.y);
-
     // 6) 积分
     // 平动：F_world = R·F_body；a = F/m
     this.invQuat.copy(this.body.quaternion).invert();
     this.fWorld.copy(this.fBody).applyQuaternion(this.body.quaternion);
-    if (this.tether.forceOut.lengthSq() > 1e-8) this.fWorld.add(this.tether.forceOut);
+    // 解锁 + 无输入：悬停保持当前位置（抵消净浮力 + 水平阻尼）
+    if (!this.motorLocked && this.isIdleInput()) {
+      this.fWorld.y += this.hoverCompY;
+      this.body.velocityWorld.x *= 0.985;
+      this.body.velocityWorld.z *= 0.985;
+    }
     const accelWorld = this.fWorld.divideScalar(this.body.config.massKg);
     integrateLinear(this.body.position, this.body.velocityWorld, accelWorld, dt);
 
-    // 转动：α = I⁻¹(τ - ω×Iω)（含缆绳缠绕阻尼）
-    if (this.tether.torqueY !== 0) this.tauBody.y += this.tether.torqueY;
+    // 转动：α = I⁻¹(τ - ω×Iω)
     const alpha = this.body.angularAcceleration(this.tauBody);
     this.body.omegaBody.addScaledVector(alpha, dt);
     integrateQuaternion(this.body.quaternion, this.body.omegaBody, dt);

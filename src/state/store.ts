@@ -78,7 +78,6 @@ interface AppState {
   /** DVL 多普勒测速（悬停保持 + 洋流削弱） */
   dvlEnabled: boolean;
   /** 脐带缆（浮力线）开关 */
-  tetherEnabled: boolean;
 
   // actions
   gotoMenu(): void;
@@ -102,7 +101,6 @@ interface AppState {
   setSettingsOpen(v: boolean): void;
   setGamepadSensitivity(v: GamepadSensitivity): void;
   setDvlEnabled(v: boolean): void;
-  setTetherEnabled(v: boolean): void;
   setEnvParam<K extends keyof EnvironmentParams>(key: K, value: number): void;
   resetEnvParams(): void;
   setLightsOn(on: boolean): void;
@@ -139,7 +137,6 @@ export const useAppStore = create<AppState>()(
   settingsOpen: false,
   gamepadSensitivity: 'high',
   dvlEnabled: false,
-  tetherEnabled: false,
 
   gotoMenu: () => set({ screen: 'menu', hud: null, paused: false, taskState: null, taskResult: null }),
   startTraining: () => set({ screen: 'training', paused: false, taskResult: null }),
@@ -162,7 +159,6 @@ export const useAppStore = create<AppState>()(
   setSettingsOpen: (settingsOpen) => set({ settingsOpen }),
   setGamepadSensitivity: (gamepadSensitivity) => set({ gamepadSensitivity }),
   setDvlEnabled: (dvlEnabled) => set({ dvlEnabled }),
-  setTetherEnabled: (tetherEnabled) => set({ tetherEnabled }),
   setEnvParam: (key, value) =>
     set((s) => ({ envParams: { ...s.envParams, [key]: value } })),
   resetEnvParams: () => set({ envParams: { ...DEFAULT_ENV_PARAMS } }),
@@ -177,12 +173,11 @@ export const useAppStore = create<AppState>()(
       // 版本 5：罗盘样式不再持久化；浮力线已取消（强制关闭旧缓存值）
       version: 5,
       migrate: (persistedState, version) => {
-        const s = persistedState as { state?: { compassStyle?: string; tetherEnabled?: boolean } } | undefined;
+        const s = persistedState as { state?: { compassStyle?: string } } | undefined;
         if (s?.state) {
           const state = { ...s.state };
           if ((version ?? 0) < 5) {
             delete (state as Record<string, unknown>).compassStyle;
-            state.tetherEnabled = false;
           }
           return { ...s, state };
         }
@@ -206,7 +201,6 @@ export const useAppStore = create<AppState>()(
         units: s.units,
         gamepadSensitivity: s.gamepadSensitivity,
         dvlEnabled: s.dvlEnabled,
-        tetherEnabled: s.tetherEnabled,
       }),
     },
   ),

@@ -319,24 +319,47 @@ export function TrainingScreen() {
         sway: ax(pad.axes[2]) * sens,
         heave: ax(useAppStore.getState().gamepadMode === 'us' ? -pad.axes[1] : -pad.axes[3]) * sens,
         yaw: ax(pad.axes[0]) * sens,
-        pitch: ((b(5) ? 1 : 0) - (b(4) ? 1 : 0)) * sens, // RB 抬头 / LB 低头
-        roll: ((b(7) ? 1 : 0) - (b(6) ? 1 : 0)) * sens, // RT 右倾 / LT 左倾
+        // 十字键：上/下 = 俯仰（上=低头，下=抬头）；左/右 = 横滚（右=左倾，左=右倾）
+        pitch: ((b(12) ? 1 : 0) - (b(13) ? 1 : 0)) * sens,
+        roll: ((b(14) ? 1 : 0) - (b(15) ? 1 : 0)) * sens,
       };
+      // 肩键：LB = 夹爪闭合、RB = 夹爪张开（按住连续开合）
+      if (b(4) || b(5)) {
+        const next = Math.max(0, Math.min(1, gripperOpenRef.current + (b(5) ? 0.04 : -0.04)));
+        if (Math.abs(next - gripperOpenRef.current) > 0.0005) {
+          gripperOpenRef.current = next;
+          const eng = engineRef.current;
+          if (eng) eng.setGripper(next);
+          setGripperOpen(next);
+        }
+      }
       const anyInput =
         Math.abs(pad.axes[1]) > 0.12 || Math.abs(pad.axes[0]) > 0.12 ||
         Math.abs(pad.axes[3]) > 0.12 || Math.abs(pad.axes[2]) > 0.12 ||
         input.pitch !== 0 || input.roll !== 0;
       if (anyInput) padActiveUntil = Date.now() + 1200;
+      // 电机锁定状态收到手柄运动输入 → 提示先解锁
+      if (anyInput) {
+        const sim = simRef.current;
+        if (sim && sim.getMotorLocked()) hintUnlock();
+      }
       // 手柄活跃期间覆盖键盘输入
       if (Date.now() < padActiveUntil) {
         simRef.current?.setControlInput(input);
       }
       // 按钮事件（下降沿 / 长按判定）
-      // A = 空格动作（按住完成打捞/检查）；松开时结束
-      if (b(0) && !prevBtns[0]) actionDownRef.current = true;
+      // A = 空格动作（长按完成打捞/检查）；短按（<400ms）= 解锁/加锁电机
+      if (b(0) && !prevBtns[0]) {
+        aDownAtRef.current = Date.now();
+        actionDownRef.current = true;
+      }
       if (!b(0) && prevBtns[0]) {
         actionDownRef.current = false;
         actionHoldRef.current = 0;
+        if (Date.now() - aDownAtRef.current < 400) {
+          const sim = simRef.current;
+          if (sim) sim.setMotorLocked(!sim.getMotorLocked());
+        }
       }
       if (b(1) && !prevBtns[1]) {
         // B 补光灯（短按）
@@ -381,7 +404,7 @@ export function TrainingScreen() {
       window.clearInterval(grabTimer);
       window.clearInterval(padTimer);
       window.clearInterval(sessionTimer);
-      sim.setTetherEnabled(false); // 浮力线已取消
+      useAppStore.getState().setSonarVisible(false); // 每次进入场景默认关闭声纳
       engine.dispose();
       sim.dispose();
       simRef.current = null;
@@ -389,6 +412,7 @@ export function TrainingScreen() {
       distSonarRef.current = null;
       setHud(null);
       setTaskState(null);
+      if (unlockMsgTimerRef.current) window.clearTimeout(unlockMsgTimerRef.current);
     };
   }, [selectedRovId, selectedSceneId, setHud, setTaskState, setTaskResult, addRecord]);
 
@@ -410,6 +434,10 @@ export function TrainingScreen() {
       (Object.keys(input) as (keyof ControlInput)[]).forEach((k) => {
         input[k] = Math.max(-1, Math.min(1, input[k]));
       });
+      // 电机锁定状态收到运动输入 → 提示先解锁
+      if (sim.getMotorLocked() && (Math.abs(input.surge) > 0.01 || Math.abs(input.sway) > 0.01 || Math.abs(input.heave) > 0.01 || Math.abs(input.yaw) > 0.01 || Math.abs(input.pitch) > 0.01 || Math.abs(input.roll) > 0.01)) {
+        hintUnlock();
+      }
       sim.setControlInput(input);
     };
 
@@ -418,6 +446,7 @@ export function TrainingScreen() {
       const code = e.code;
       if (code === 'Space') {
         e.preventDefault();
+        spaceDownAtRef.current = Date.now();
         actionDownRef.current = true;
         return;
       }
@@ -468,6 +497,11 @@ export function TrainingScreen() {
       if (e.code === 'Space') {
         actionDownRef.current = false;
         actionHoldRef.current = 0;
+        // 短按（<400ms）= 解锁/加锁电机；长按 = 动作（打捞/检查）
+        if (Date.now() - spaceDownAtRef.current < 400) {
+          const sim = simRef.current;
+          if (sim) sim.setMotorLocked(!sim.getMotorLocked());
+        }
         return;
       }
       if (e.code in KEYMAP) {
@@ -547,6 +581,17 @@ export function TrainingScreen() {
   const tryGrabRef = useRef<() => void>(() => {});
   const [grabMsg, setGrabMsg] = useState<string | null>(null);
   const grabMsgTimerRef = useRef<number | null>(null);
+  const [unlockMsg, setUnlockMsg] = useState(false);
+  const unlockMsgTimerRef = useRef<number | null>(null);
+  const spaceDownAtRef = useRef(0);
+  const aDownAtRef = useRef(0);
+  /** 电机锁定提示（锁定状态收到运动输入） */
+  const hintUnlock = useCallback(() => {
+    if (useAppStore.getState().paused) return;
+    setUnlockMsg(true);
+    if (unlockMsgTimerRef.current) window.clearTimeout(unlockMsgTimerRef.current);
+    unlockMsgTimerRef.current = window.setTimeout(() => setUnlockMsg(false), 2500);
+  }, []);
   tryGrabRef.current = () => {
     const sim = simRef.current;
     const engine = engineRef.current;
@@ -662,6 +707,7 @@ export function TrainingScreen() {
             : `${t('help_grab')} · ${t('grip_open')} ${Math.round(gripperOpen * 100)}%`}
         </span>
         {grabMsg && <span style={{ color: '#ff8a65' }}>{grabMsg}</span>}
+        {unlockMsg && <span style={{ color: '#ff7043', fontWeight: 700 }}>{t('hint_unlock_first')}</span>}
         <span style={styles.infoChip}>{t('set_hud_layout')}: {t(hudLayout === 'corner' ? 'val_corner' : 'val_hud')}</span>
         <span style={styles.infoChip}>{units === 'imperial' ? 'ft / ℉' : 'm / ℃'}</span>
       </div>
@@ -720,17 +766,18 @@ function HudStatusBar() {
   const t = (k: DictKey, vars?: Record<string, string | number>) => tr(language, k, vars);
   return (
     <>
+      {/* 电机锁定状态（锁定 = 加粗重点，位于速度前） */}
+      {hud && (
+        <span style={hud.motorLocked ? { color: '#ff7043', fontWeight: 800, letterSpacing: 1 } : { color: '#4fc3f7', fontWeight: 400 }}>
+          {t(hud.motorLocked ? 'motor_locked' : 'motor_unlocked')}
+        </span>
+      )}
       <span>{t('hud_depth')} {hud ? fmtDepth(hud.depthMeters, units) : '—'} {um.depth}</span>
       <span>{t('hud_speed')} {hud ? hud.speedKnots.toFixed(2) : '—'} kn</span>
       <span>{t('hud_heading')} {hud ? Math.round(hud.headingDeg) : '—'}°</span>
       <span>{t('hud_pitch')} {hud ? hud.pitchDeg.toFixed(1) : '—'}°</span>
       <span>{t('hud_roll')} {hud ? hud.rollDeg.toFixed(1) : '—'}°</span>
       <span>{t('hud_temp')} {hud ? fmtTemp(hud.temperatureC, units) : '—'} {um.temp}</span>
-      {hud && hud.tetherWrapTurns > 0 && (
-        <span style={{ color: '#ffb74d', fontWeight: 600 }}>
-          ⚠ {t('tether_wrap', { n: hud.tetherWrapTurns })}
-        </span>
-      )}
     </>
   );
 }
@@ -748,6 +795,7 @@ function HelpPanel({ t, onClose }: { t: (k: DictKey, vars?: Record<string, strin
     ['B', t('help_level')],
     ['L', t('set_lights')],
     ['I', t('help_sonar')],
+    ['Space / A', t('help_motor')],
     ['Esc', t('help_pause')],
     ['🎮 ' + t('menu_key'), t('menu_key') + ' · ' + t('back_key')],
     ['🎮 ' + t('pad_hint').split('·')[0], t('pad_hint')],

@@ -54,10 +54,8 @@ export interface HudSnapshot {
   temperatureC: number;
   /** 供迷你姿态模型使用（四元数） */
   attitude: ROVSnapshot['quaternion'];
-  /** 脐带缆缠绕圈数（0 = 未缠绕） */
-  tetherWrapTurns: number;
-  /** 脐带缆张力 N */
-  tetherTension: number;
+  /** 电机锁定状态（锁定 = 推进器无动力） */
+  motorLocked: boolean;
   /** POV 定距声纳（6 向测距，5Hz 更新） */
   distanceSonar?: DistanceReadings;
 }

@@ -105,7 +105,7 @@ export function SonarView({ engineRef }: { engineRef: React.MutableRefObject<Eng
       if (!sim || !ctx) return;
       // 定期刷新采样目标（场景切换后生效）
       refreshCount++;
-      if (refreshCount % 20 === 0) samplerRef.current?.refreshTargets();
+      if (refreshCount % 6 === 0) samplerRef.current?.refreshTargets();
       const snap = sim.getRenderSnapshot();
       const pos = engine.getSonarOrigin(snap);
       const yaw = deg2rad(snap.euler.yaw);
@@ -116,9 +116,10 @@ export function SonarView({ engineRef }: { engineRef: React.MutableRefObject<Eng
       const env = sim.environment.get();
       if (sampler0) {
         const total = sampler0.getBeamCount();
-        const third = Math.max(1, Math.ceil(total / 3));
-        const startBeam = (frameCounter % 3) * third;
-        const count = Math.min(third, total - startBeam);
+        // 分帧 6 份：每帧只扫 1/6 波束，图像滚动更平滑（更精细）
+        const sliceN = Math.max(1, Math.ceil(total / 6));
+        const startBeam = (frameCounter % 6) * sliceN;
+        const count = Math.min(sliceN, total - startBeam);
         const beams = sampler0.sample(pos, yaw, startBeam, count, { pitchRad: deg2rad(snap.euler.pitch), rollRad: deg2rad(snap.euler.roll) });
         simulator.renderFrame(beams, startBeam, { turbidity: env.turbidity, visibility: env.visibility });
         frameCounter++;

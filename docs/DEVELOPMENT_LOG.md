@@ -115,3 +115,12 @@ Chronological record of the project, milestones and key decisions. Useful for on
 - Further sonar frame-slicing (6 slices) on low-end devices.
 - GLTF external model pipeline as default for branded vehicles (ship.glb provided but not used; procedural hull kept).
 - CI + GitHub Pages workflow.
+
+## M15 — Gamepad remap, sonar fixes, motor lock, tether removal
+
+- **Gamepad**: D-pad now drives pitch (up/down) and roll (left/right); LB/RB drive gripper open/close (hold); LT/RT unassigned. D-pad directions flipped per user (up = nose down, right = roll left).
+- **Gripper**: jaws now spread **laterally** (rotation around Y, both sides) with slimmer fingers for clearer opening visibility.
+- **Sonar**: sub-ray echoes are de-duplicated by distance (no more triple arc ghosts); vertical coverage upgraded 3 → 5 sub-rays; frame slicing 3 → 6 (smoother rolling); target refresh every 6 samples; sonar is force-closed on every training entry (was auto-open & stale).
+- **Motor lock system**: every training starts with motors **locked** — no thruster force (vehicle drifts up like before). Tap Space / gamepad A to unlock/lock. When unlocked and idle, the physics applies a hover compensation (net-buoyancy cancel + lateral damping) so the vehicle holds position; thrusters show a slight idle spin. Lock status shown bold in the bottom status bar (before speed) and in the POV corner box; locked inputs show "Unlock motors first". Help panel & README updated.
+- **Tether removed**: deleted `Tether.ts`; all tether hooks removed from `PhysicsWorld`, `SimulationEngine`, `Engine`, store, HUD, i18n (bundle −4.3 kB gzip).
+- Verified: locked 3 s drifts to 9.80 m depth; unlocked 3/6 s holds 10.00 m at 0 kn.

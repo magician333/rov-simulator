@@ -13,6 +13,7 @@ Built with **Three.js + React 18 + TypeScript + Zustand + Vite**. No backend req
 - **Multi-beam fan sonar**: low freq 120°×120 m (vertical ±10°), high freq 80°×40 m (vertical ±6°), adjustable gain / range / noise / palette, DME sonar (5-point distance ranging)
 - **Manipulator arm**: wheel-mode camera/gripper zoom, fine gripper with opening %, grab hints
 - **Mission system**: navigate → approach → action (hold Space), score records + JSON export
+- **Motor safety**: scenes start with motors **locked** (no thrust, ROV drifts up). Tap Space / gamepad A to unlock/lock; unlocked motors idle-hover to hold position.
 - **Environment model**: sea state / river / custom modes — current speed & direction, turbulence, visibility, temperature, turbidity, lighting, DVL (Doppler velocity log, hover-hold)
 - **Views**: chase cam, POV HUD (attitude / compass / depth / pitch-roll grids / radar-style sonar) + 2D fan sonar panel
 - **i18n**: Simplified Chinese / English / Español — auto-detected from browser language, defaults to English; metric/imperial units, °C/°F
@@ -73,6 +74,7 @@ npm run build
 | `↑` / `↓` | Pitch down / up |
 | `←` / `→` | Turn left / right (yaw) |
 | `R` / `F` | Roll left / right |
+| `Space` (tap) | Unlock / Lock motors (locked by default on start) |
 | `Space` (hold) | Action (grab / operate) |
 | `X` | Grab / release |
 | `S` | Sonar panel on / off |
@@ -104,7 +106,8 @@ npm run build
 1. Pick a scene + vehicle in the main menu, press **START**.
 2. Check the mission brief (top-left task panel) and sonar markers.
 3. Navigate close to the target using the sonar / POV HUD.
-4. Hold `Space` (or `A` on gamepad) to perform the action (e.g. grab the container, inspect the weld).
+4. Tap `Space` (or `A` on gamepad) to **unlock motors** (otherwise no thrust — the ROV drifts back up). When unlocked and idle, the vehicle hovers to hold position.
+5. Hold `Space` (or `A`) to perform the action (e.g. grab the container, inspect the weld).
 5. Finish to get a score — saved in the records page (JSON export available).
 
 ### Settings

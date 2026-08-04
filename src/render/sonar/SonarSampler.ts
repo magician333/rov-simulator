@@ -69,9 +69,9 @@ export class SonarSampler {
     const half = ((sectorDeg / 2) * Math.PI) / 180;
     const result: SonarBeamHit[][] = new Array(n);
     this.raycaster.far = rangeM;
-    // 垂直子射线：按 params.verticalDeg 对称分布（±half、0）
+    // 垂直子射线：按 params.verticalDeg 对称分布 5 条（±half、±half/2、0），垂直覆盖更细
     const vHalf = this.params.verticalDeg / 2;
-    const tilts = [-vHalf, 0, vHalf].map((d) => (d * Math.PI) / 180);
+    const tilts = [-vHalf, -vHalf / 2, 0, vHalf / 2, vHalf].map((d) => (d * Math.PI) / 180);
     // 声纳跟随 ROV 完整姿态（yaw + pitch + roll），与 POV 摄像头朝向一致
     this.attQuat.setFromEuler(new THREE.Euler(pose?.pitchRad ?? 0, yawRad, pose?.rollRad ?? 0, 'YXZ'));
 
@@ -99,9 +99,19 @@ export class SonarSampler {
         }
       }
 
+      // 子射线对同一目标会命中多次（距离接近）→ 合并去重，避免图像出现多重弧线
       result[i] = echoes
         .filter((e) => e.distance <= rangeM)
-        .sort((x, y) => x.distance - y.distance);
+        .sort((x, y) => x.distance - y.distance)
+        .reduce<SonarBeamHit[]>((acc, e) => {
+          const last = acc[acc.length - 1];
+          if (last && Math.abs(last.distance - e.distance) < 0.9) {
+            if (e.strength > last.strength) last.strength = e.strength;
+          } else {
+            acc.push({ distance: e.distance, strength: e.strength });
+          }
+          return acc;
+        }, []);
     }
     return result;
   }
