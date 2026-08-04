@@ -146,3 +146,10 @@ Chronological record of the project, milestones and key decisions. Useful for on
 - M2S thrusters: duct black, blades bright yellow plastic.
 - Generic ROV gets `attitudeLimits` { pitch ±60°, roll ±45° } clamped each physics step (verified 60.0°/45.0° steady-state).
 - M2S pitch/roll torque scale raised 2× → 4× (roll 2 s ≈ 75.4°, +50% faster than before; no attitude limit on M2S).
+
+## M19 — M2S agility 8×, thick plastic frame, hard speed limit, attitude clamp fix
+
+- M2S pitch/roll torque scale 4× → 8× (roll 2 s ≈ 108°, verified).
+- M2S frame tubes thickened (r 0.022 → 0.038) and material switched to light-gray plastic (roughness 0.62 / metalness 0.08).
+- Hard speed limit: thrust cut to zero beyond 2% over-limit band — M2S full throttle now holds exactly 3.00 kn (was overshooting ~4+).
+- Attitude clamp now zeroes angular velocity on reached-limit axes — sustained pitch at ±60° no longer induces roll drift (verified pitch 60.0 / roll 0.0).

@@ -178,7 +178,7 @@ export const CHASING_M2_CONFIG: ROVConfig = {
   visualVariant: 'm2',
   maxSpeedKnots: 3,
   // 俯仰/横滚灵活性 +100%（转动响应 ×2，更轻盈）
-  torqueScale: { yaw: 1, pitch: 4, roll: 4 },
+  torqueScale: { yaw: 1, pitch: 8, roll: 8 },
   maxSwaySpeedKnots: 1.5,
   maxHeaveSpeedKnots: 1.5,
   massKg: 30,

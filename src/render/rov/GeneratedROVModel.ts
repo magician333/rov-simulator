@@ -57,8 +57,8 @@ export class GeneratedROVModel {
 
   private initMaterials(): void {
     if (this.variant === 'm2') {
-      // CHASING M2 参考：浅灰外框（铝管/箱体）+ 亮黄电机（导管+转子）
-      this.matFrame = new THREE.MeshStandardMaterial({ color: 0xb8bec4, roughness: 0.5, metalness: 0.55, map: getTexture('deepmetal') });
+      // CHASING M2 参考：浅灰塑料外框（加粗管材）+ 亮黄电机（叶片）
+      this.matFrame = new THREE.MeshStandardMaterial({ color: 0xc3c9cf, roughness: 0.62, metalness: 0.08, map: getTexture('deepmetal') });
       this.matBuoyancy = new THREE.MeshStandardMaterial({ color: 0xf2c94c, roughness: 0.55, metalness: 0.15 });
       this.matHull = new THREE.MeshStandardMaterial({ color: 0xb8bec4, roughness: 0.45, metalness: 0.6, map: getTexture('deepmetal') });
       this.matDuct = new THREE.MeshStandardMaterial({ color: 0x23262b, roughness: 0.45, metalness: 0.55 });
@@ -83,7 +83,8 @@ export class GeneratedROVModel {
     const hx = width / 2;
     const hy = height / 2;
     const hz = length / 2;
-    const r = 0.022;
+    // M2 变体外框加粗（塑料管件更粗壮）
+    const r = this.variant === 'm2' ? 0.038 : 0.022;
     const seg = 10;
     const makeTube = (len: number, ax: 'x' | 'y' | 'z') => {
       const geo = new THREE.CylinderGeometry(r, r, len, seg);

@@ -474,3 +474,9 @@
 - M2S 推进器：导管黑色、叶片亮黄
 - 通用 ROV：attitudeLimits 俯仰±60°/横滚±45°（物理每步 clamp，验证 60.0/45.0）
 - M2S torqueScale pitch/roll 2→4（roll 2s 75.4°，再 +100%）
+
+## 本轮（M2S 8x机动/外框加粗塑料/硬限速/姿态横滚修复）
+- M2S torqueScale pitch/roll 4→8（roll 2s 107.9°）
+- M2S 外框管材 r 0.022→0.038 加粗 + 浅灰塑料（roughness 0.62/metalness 0.08）
+- 硬限速：超速带 2% 内线性归零推力 → M2S 全油门稳定 3.00 节（不再 4+）
+- clampAttitude 越界轴角速度归零 → 俯仰 60° 时 roll 保持 0（不再诱发横滚）

@@ -174,7 +174,10 @@ export class ROVController {
       vSway = Math.abs(vBody.x);
     }
     if (vForward > this.vForwardLimit && surge > 0) {
-      surge *= Math.max(0, 1 - (vForward - this.vForwardLimit) / this.vForwardLimit);
+      // 硬限速：超过限速立即快速切除推力（2% 超速带内线性归零，防瞬时超调）
+      const over = vForward - this.vForwardLimit;
+      const band = Math.max(0.05, this.vForwardLimit * 0.02);
+      surge *= over > band ? 0 : Math.max(0, 1 - over / band);
     }
     // 侧向限速
     if (vSway > this.vSwayLimit && Math.abs(sway) > 0) {

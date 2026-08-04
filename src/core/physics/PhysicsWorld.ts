@@ -137,6 +137,9 @@ export class PhysicsWorld {
     if (changed) {
       this.body.quaternion.setFromEuler(e);
       this.body.quaternion.normalize();
+      // 已到限位轴的角速度归零：防止持续顶压导致欧拉分解漂移（俯仰超限诱发横滚）
+      if (maxP !== undefined && Math.abs(e.x) >= maxP - 1e-6) this.body.omegaBody.x = 0;
+      if (maxR !== undefined && Math.abs(e.z) >= maxR - 1e-6) this.body.omegaBody.z = 0;
     }
   }
 
