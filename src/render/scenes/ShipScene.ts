@@ -16,7 +16,7 @@ class ShipSceneImpl implements SceneDefinition {
   readonly spawn = { position: [0, -1.2, 30] as [number, number, number], yawDeg: 0 };
   readonly colliders = [
     { type: 'box' as const, position: new THREE.Vector3(0, -2.5, 0), halfExtents: new THREE.Vector3(4.6, 3.6, 21) }, // 船体
-    { type: 'box' as const, position: new THREE.Vector3(0, -2.5, -21), halfExtents: new THREE.Vector3(4, 2.6, 3) }, // 船艏
+    { type: 'box' as const, position: new THREE.Vector3(0, -2.5, -25.5), halfExtents: new THREE.Vector3(4, 2.6, 4.5) }, // 船艏（含球鼻艏）
     { type: 'sphere' as const, position: new THREE.Vector3(0, -4, 21.5), radius: 2.6 }, // 螺旋桨
   ];
   readonly localFlowZones = [

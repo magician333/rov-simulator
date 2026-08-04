@@ -129,7 +129,7 @@ function CornerLayout(props: {
 
       {/* 左上角小标签 */}
       <div style={{ position: 'absolute', top: 64, left: 20, fontSize: 12, color: '#5b93ab', letterSpacing: 2 }}>
-        VIEW: {t('view_pov')} · {props.frameTxt} · {props.powerTxt}
+        {t('hud_view')}: {t('view_pov')} · {props.frameTxt} · {props.powerTxt}
       </div>
     </>
   );

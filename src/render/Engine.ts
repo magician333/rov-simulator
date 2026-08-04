@@ -63,6 +63,7 @@ export class Engine {
   constructor(container: HTMLElement, options: EngineOptions = {}) {
     this.container = container;
     const quality = options.quality ?? 'medium';
+    this.quality = quality;
 
     this.renderer = new THREE.WebGLRenderer({ antialias: quality !== 'low', powerPreference: 'high-performance' });
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, quality === 'high' ? 2 : 1.5));
@@ -212,6 +213,12 @@ export class Engine {
     this.quality = q;
     this.sceneManager.quality = q;
     this.effects.setQuality(q);
+    // low→high 切换时补建环境反射贴图（金属/塑料高光）
+    if (q !== 'low' && !this.scene.environment) {
+      const pmrem = new THREE.PMREMGenerator(this.renderer);
+      this.scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+      pmrem.dispose();
+    }
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, q === 'high' ? 2 : 1.5));
     this.renderer.shadowMap.enabled = q !== 'low';
     this.renderer.setSize(this.container.clientWidth, this.container.clientHeight);

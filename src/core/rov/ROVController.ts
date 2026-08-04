@@ -68,6 +68,14 @@ export class ROVController {
   /** 水平 PD 参数 */
   private readonly kp = 70;
   private readonly kd = 18;
+  /** 电机锁定（由 PhysicsWorld 同步，锁定拒绝一键水平） */
+  private motorLocked = false;
+
+  setMotorLocked(locked: boolean): void {
+    this.motorLocked = locked;
+    if (locked) this.levelActive = false;
+  }
+
   /** 控制坐标系 */
   axisMode: AxisMode = 'body';
   /** 动力曲线 */
@@ -78,7 +86,11 @@ export class ROVController {
   private readonly invQuat = new THREE.Quaternion();
   private readonly vTmp = new THREE.Vector3();
 
+  /** 可控轴集合（构造缓存，避免每步 includes） */
+  private readonly axesSet = new Set<string>();
+
   constructor(private config: ROVConfig) {
+    this.config.controllableAxes.forEach((a) => this.axesSet.add(a));
     // 机型转动响应缩放（默认 1）
     const ts = config.torqueScale ?? {};
     this.tauMax.yaw *= ts.yaw ?? 1;
@@ -123,8 +135,9 @@ export class ROVController {
     return v / 0.514444;
   }
 
-  /** 触发一键水平 */
+  /** 触发一键水平（电机锁定时无动力，直接拒绝避免 PD 空转） */
   startLevel(): void {
+    if (this.motorLocked) return;
     this.levelActive = true;
   }
 
@@ -176,10 +189,10 @@ export class ROVController {
       vSway = Math.abs(vBody.x);
     }
     if (vForward > this.vForwardLimit && surge > 0) {
-      // 硬限速：超过限速立即快速切除推力（2% 超速带内线性归零，防瞬时超调）
+      // 连续限速：10% 超速带内线性削减至 0（无硬切，避免推力跳变极限环）
       const over = vForward - this.vForwardLimit;
-      const band = Math.max(0.05, this.vForwardLimit * 0.02);
-      surge *= over > band ? 0 : Math.max(0, 1 - over / band);
+      const band = Math.max(0.08, this.vForwardLimit * 0.1);
+      surge *= Math.max(0, 1 - over / band);
     }
     // 侧向限速
     if (vSway > this.vSwayLimit && Math.abs(sway) > 0) {
@@ -203,7 +216,7 @@ export class ROVController {
       out[1] = heave * fHeave * lvl;          // F_y（上 +Y）
       out[2] = -surge * fSurge * lvl;         // F_z（前进 = -Z）
       // 偏航：直接用体 Y
-      if (this.config.controllableAxes.includes('yaw')) out[4] = -applyCurve(input.yaw, this.powerCurve) * this.tauMax.yaw * lvl;
+      if (this.axesSet.has('yaw')) out[4] = -applyCurve(input.yaw, this.powerCurve) * this.tauMax.yaw * lvl;
     } else {
       // 世界坐标系：前 = 机头水平投影方向（yaw，忽略 pitch/roll）
       // 前向水平 = rotateY(yaw)·(0,0,-1) = (-sinY, 0, -cosY)
@@ -224,12 +237,12 @@ export class ROVController {
       out[1] = this.vTmp.y;
       out[2] = this.vTmp.z;
       // 偏航用体 Y（水平时 = 世界 Y）：不转体，稳定无耦合
-      if (this.config.controllableAxes.includes('yaw')) out[4] = -applyCurve(input.yaw, this.powerCurve) * this.tauMax.yaw * lvl;
+      if (this.axesSet.has('yaw')) out[4] = -applyCurve(input.yaw, this.powerCurve) * this.tauMax.yaw * lvl;
     }
 
     // 俯仰/横滚：体轴（两种模式一致），应用曲线与动力百分比
-    if (this.config.controllableAxes.includes('pitch')) out[3] += applyCurve(input.pitch, this.powerCurve) * this.tauMax.pitch * lvl;
-    if (this.config.controllableAxes.includes('roll')) out[5] += applyCurve(input.roll, this.powerCurve) * this.tauMax.roll * lvl;
+    if (this.axesSet.has('pitch')) out[3] += applyCurve(input.pitch, this.powerCurve) * this.tauMax.pitch * lvl;
+    if (this.axesSet.has('roll')) out[5] += applyCurve(input.roll, this.powerCurve) * this.tauMax.roll * lvl;
 
     // 一键水平：PD 覆盖 pitch/roll
     if (this.levelActive) {

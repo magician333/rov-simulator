@@ -23,6 +23,8 @@ export class SonarSampler {
   private raycaster = new THREE.Raycaster();
   private dir = new THREE.Vector3();
   private readonly attQuat = new THREE.Quaternion();
+  private cachedTiltHalf = -1;
+  private cachedTiltArrRad: number[] = [];
   /** 采样目标（排除海底/ROV/粒子；场景加载后需 refresh） */
   private targets: THREE.Object3D[] = [];
 
@@ -53,6 +55,15 @@ export class SonarSampler {
     return Math.max(1, Math.round(this.params.beamCount * this.beamScale));
   }
 
+  /** 垂直子射线缓存（verticalDeg 不变时复用，避免每帧分配） */
+  private cachedTilts(vHalfDeg: number): number[] {
+    if (this.cachedTiltHalf !== vHalfDeg) {
+      this.cachedTiltHalf = vHalfDeg;
+      this.cachedTiltArrRad = [-vHalfDeg, -vHalfDeg / 2, 0, vHalfDeg / 2, vHalfDeg].map((d) => (d * Math.PI) / 180);
+    }
+    return this.cachedTiltArrRad;
+  }
+
   /**
    * 采样（支持分帧：start/count 指定波束范围，count 缺省 = 全量）。
    */
@@ -71,7 +82,7 @@ export class SonarSampler {
     this.raycaster.far = rangeM;
     // 垂直子射线：按 params.verticalDeg 对称分布 5 条（±half、±half/2、0），垂直覆盖更细
     const vHalf = this.params.verticalDeg / 2;
-    const tilts = [-vHalf, -vHalf / 2, 0, vHalf / 2, vHalf].map((d) => (d * Math.PI) / 180);
+    const tilts = this.cachedTilts(vHalf);
     // 声纳跟随 ROV 完整姿态（yaw + pitch + roll），与 POV 摄像头朝向一致
     this.attQuat.setFromEuler(new THREE.Euler(pose?.pitchRad ?? 0, yawRad, pose?.rollRad ?? 0, 'YXZ'));
 
@@ -96,9 +107,9 @@ export class SonarSampler {
         }
       }
 
-      // 子射线对同一目标会命中多次（距离接近）→ 合并去重，避免图像出现多重弧线
+      // 子射线对同一目标会命中多次（距离接近）→ 排序合并去重，避免图像出现多重弧线
+      // （echoes 收集时已按 rangeM 过滤，无需再 filter）
       result[i] = echoes
-        .filter((e) => e.distance <= rangeM)
         .sort((x, y) => x.distance - y.distance)
         .reduce<SonarBeamHit[]>((acc, e) => {
           const last = acc[acc.length - 1];

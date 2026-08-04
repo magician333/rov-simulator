@@ -73,9 +73,10 @@ export class PhysicsWorld {
     this.colliders = colliders;
   }
 
-  /** 电机加锁/解锁（锁定 = 推进器无动力） */
+  /** 电机加锁/解锁（锁定 = 推进器无动力；同步控制器拒绝一键水平） */
   setMotorLocked(locked: boolean): void {
     this.motorLocked = locked;
+    this.controller.setMotorLocked(locked);
   }
 
   getMotorLocked(): boolean {
@@ -195,8 +196,8 @@ export class PhysicsWorld {
     // 姿态角限制（通用 ROV：俯仰 ±60°、横滚 ±45°）
     this.clampAttitude();
 
-    // DVL 悬停保持：无控制输入时锁定位置（PD 反馈 + 速度阻尼）
-    if (this.dvlOn) {
+    // DVL 悬停保持：无控制输入时锁定位置（PD 反馈 + 速度阻尼）；电机锁定语义下不保持
+    if (this.dvlOn && !this.motorLocked) {
       const inp = this.input;
       const idle =
         inp.surge === 0 && inp.sway === 0 && inp.heave === 0 &&

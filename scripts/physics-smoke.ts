@@ -6,6 +6,12 @@ import { SimulationEngine } from '../src/core/SimulationEngine';
 
 const FIXED = 1 / 120;
 const sim = new SimulationEngine({ rovId: 'rov_6dof_standard', startLightsOn: false });
+
+/** 重置并解锁电机（电机锁系统：默认锁定，冒烟用例需解锁才有效） */
+function resetSim(posY = -10): void {
+  sim.reset({ position: new (require('three').Vector3)(0, posY, 0) });
+  sim.setMotorLocked(false);
+}
 const env = sim.environment;
 env.reset();
 
@@ -42,7 +48,7 @@ function run(seconds: number, label: string, input: () => void, sampleEvery = 60
 run(5, '空载漂移', () => { sim.clearControlInput(); });
 
 // 2) 全油门前进（surge=1）→ 期望收敛 ≈ 4.4 kn
-sim.reset();
+resetSim();
 sim.setControlInput({ surge: 1 });
 run(30, '全油门前进', () => sim.setControlInput({ surge: 1 }));
 
@@ -51,22 +57,22 @@ sim.setControlInput({});
 run(8, '松手减速', () => sim.clearControlInput());
 
 // 4) 下潜（heave=-1）
-sim.reset();
+resetSim();
 sim.setControlInput({ heave: -1 });
 run(10, '下潜指令', () => sim.setControlInput({ heave: -1 }));
 
 // 5) 右转（yaw=1）→ heading 顺时针增加
-sim.reset();
+resetSim();
 sim.setControlInput({ yaw: 1 });
 run(6, '右转指令', () => sim.setControlInput({ yaw: 1 }));
 
 // 6) 抬头（pitch=1）
-sim.reset();
+resetSim();
 sim.setControlInput({ pitch: 1 });
 run(4, '抬头指令', () => sim.setControlInput({ pitch: 1 }));
 
 // 7) 一键水平：先横滚扰动，再触发
-sim.reset();
+resetSim();
 sim.setControlInput({ roll: 1 });
 run(3, '横滚扰动', () => sim.setControlInput({ roll: 1 }));
 sim.clearControlInput();
@@ -78,13 +84,13 @@ const after = sim.getRenderSnapshot();
 console.log(`  一键水平后 roll=${after.euler.roll.toFixed(2)}° pitch=${after.euler.pitch.toFixed(2)}° levelActive=${sim.levelActive}`);
 
 // 8) 航速限制：设置 maxSpeedKnots=1 后全油门应不超过 ~1kn
-sim.reset();
+resetSim();
 sim.setMaxSpeedKnots(1.0);
 sim.setControlInput({ surge: 1 });
 run(20, '限速1节前进', () => sim.setControlInput({ surge: 1 }));
 
 // 9) 水流：朝南（+Z）流速 1 m/s，ROV 应被水流推动 +Z
-sim.reset();
+resetSim();
 env.apply({ currentSpeed: 1, currentDirectionDeg: 0 }); // 0° = 朝南(+Z)
 sim.clearControlInput();
 run(15, '水流推动', () => sim.clearControlInput());
@@ -96,7 +102,7 @@ env.apply({ currentSpeed: 0.5, turbulence: 1 });
 run(5, '强湍流扰动', () => sim.clearControlInput());
 
 // 11) 姿态保持（Bug2 修复）：操作后松手，角速度衰减后姿态应保持（不自动回正）
-sim.reset();
+resetSim();
 sim.setControlInput({ roll: 1, pitch: -1 });
 run(0.3, '横滚+俯仰操作', () => sim.setControlInput({ roll: 1, pitch: -1 }));
 sim.clearControlInput();
@@ -109,7 +115,7 @@ console.log(
 );
 
 // 12) 水面边界（Bug1 修复）：持续上浮不应高于水面（y ≤ 0）
-sim.reset();
+resetSim();
 sim.setControlInput({ heave: 1 });
 let maxY = -Infinity;
 for (let i = 0; i < Math.round(15 / FIXED); i++) {
@@ -121,7 +127,7 @@ sim.clearControlInput();
 console.log(`  持续上浮 15s 后 y=${sim.getRenderSnapshot().position.y.toFixed(3)}（≤0 即未越过水面），过程中最高 y=${maxY.toFixed(3)}`);
 
 // 13) 坐标轴系统：世界模式下机头转向后，W 仍向世界 -Z 前进
-sim.reset();
+resetSim();
 sim.setAxisMode('world');
 sim.setControlInput({ yaw: 1 });
 run(3, '世界模式先右转90°', () => sim.setControlInput({ yaw: 1 }));
@@ -138,7 +144,7 @@ console.log(
 );
 
 // 14) 机身模式对照：同样右转后前进应沿机头方向（-X 世界方向，heading≈270）
-sim.reset();
+resetSim();
 sim.setAxisMode('body');
 sim.setControlInput({ yaw: 1 });
 run(3, '机身模式先右转90°', () => sim.setControlInput({ yaw: 1 }));

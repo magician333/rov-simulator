@@ -17,10 +17,10 @@ class OilRigSceneImpl implements SceneDefinition {
   readonly spawn = { position: [0, -1.2, 45] as [number, number, number], yawDeg: 0 };
   readonly colliders = [
     // 四根斜腿（box 近似圆柱，从海底到水面）
-    { type: 'box' as const, position: new THREE.Vector3(-8, -5, -4), halfExtents: new THREE.Vector3(1.2, 7.5, 1.2) },
-    { type: 'box' as const, position: new THREE.Vector3(8, -5, -4), halfExtents: new THREE.Vector3(1.2, 7.5, 1.2) },
-    { type: 'box' as const, position: new THREE.Vector3(-8, -5, 6), halfExtents: new THREE.Vector3(1.2, 7.5, 1.2) },
-    { type: 'box' as const, position: new THREE.Vector3(8, -5, 6), halfExtents: new THREE.Vector3(1.2, 7.5, 1.2) },
+    { type: 'box' as const, position: new THREE.Vector3(-8, -1.5, -4), halfExtents: new THREE.Vector3(1.8, 10, 1.8) },
+    { type: 'box' as const, position: new THREE.Vector3(8, -1.5, -4), halfExtents: new THREE.Vector3(1.8, 10, 1.8) },
+    { type: 'box' as const, position: new THREE.Vector3(-8, -1.5, 6), halfExtents: new THREE.Vector3(1.8, 10, 1.8) },
+    { type: 'box' as const, position: new THREE.Vector3(8, -1.5, 6), halfExtents: new THREE.Vector3(1.8, 10, 1.8) },
     // 管汇架
     { type: 'box' as const, position: new THREE.Vector3(0, -10.5, 0), halfExtents: new THREE.Vector3(5, 1.2, 3) },
   ];

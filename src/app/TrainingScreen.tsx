@@ -94,6 +94,7 @@ export function TrainingScreen() {
 
   // 任务状态
   const taskRunnerRef = useRef(new TaskRunner());
+  const lastTaskViewRef = useRef<TaskStateView | null>(null);
   const actionDownRef = useRef(false);
   const actionHoldRef = useRef(0);
   const trainTimeRef = useRef(0);
@@ -206,7 +207,23 @@ export function TrainingScreen() {
         };
         taskRunnerRef.current.update(ctx);
         const view = taskRunnerRef.current.getView();
-        setTaskState(view);
+        // 仅结构变化（步骤/阶段/时间整秒）时更新，避免每 100ms 全树重渲染
+        if (view) {
+          const prev = lastTaskViewRef.current;
+          if (
+            !prev ||
+            prev.phase !== view.phase ||
+            prev.stepIndex !== view.stepIndex ||
+            prev.completedSteps.length !== view.completedSteps.length ||
+            Math.floor(prev.elapsedSec) !== Math.floor(view.elapsedSec)
+          ) {
+            lastTaskViewRef.current = view;
+            setTaskState(view);
+          }
+        } else {
+          lastTaskViewRef.current = null;
+          setTaskState(null);
+        }
 
         const phase = view?.phase;
         if ((phase === 'completed' || phase === 'failed') && !notifiedRef.current) {
@@ -416,6 +433,7 @@ export function TrainingScreen() {
       setHud(null);
       setTaskState(null);
       if (unlockMsgTimerRef.current) window.clearTimeout(unlockMsgTimerRef.current);
+      if (grabMsgTimerRef.current) window.clearTimeout(grabMsgTimerRef.current);
     };
   }, [selectedRovId, selectedSceneId, setHud, setTaskState, setTaskResult, addRecord]);
 
@@ -684,9 +702,6 @@ export function TrainingScreen() {
         <span style={styles.rovName}>{rovName}</span>
         <span style={{ flex: 1 }} />
         {envDirty && <span style={styles.envDirty}>{t('env_dirty')}</span>}
-        {/* 参数信息展示（仅展示，不可调） */}
-        <span style={styles.infoChip}>{t('set_hud_layout')}: {t(hudLayout === 'corner' ? 'val_corner' : 'val_hud')}</span>
-        <span style={styles.infoChip}>{units === 'imperial' ? 'ft / ℉' : 'm / ℃'}</span>
         <button
           onClick={() => setHelpOpen(!helpOpen)}
           style={{ ...styles.btn, ...(helpOpen ? styles.btnActive : {}) }}

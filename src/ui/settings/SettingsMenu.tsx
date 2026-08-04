@@ -7,6 +7,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { useAppStore } from '../../state/store';
+import { getRov } from '../../core/rov/registry';
 import { tr, type DictKey } from '../../i18n';
 import { ENV_RANGES, type EnvironmentParams } from '../../core/environment/EnvironmentState';
 
@@ -62,6 +63,9 @@ function SettingsMenuInner(props: {
   onResetEnv: () => void;
 }) {
   const [tab, setTab] = useState<TabId>('disp');
+  const selectedRovId = useAppStore((s) => s.selectedRovId);
+  // 航速滑块上限 = 机型硬限速（缺省 4.5）
+  const speedCap = getRov(selectedRovId)?.hardMaxSpeedKnots ?? 4.5;
   const [focus, setFocus] = useState(0);
 
   const settingsOpen = useAppStore((s) => s.settingsOpen);
@@ -248,14 +252,14 @@ function SettingsMenuInner(props: {
           id: 'maxspeed',
           label: t('set_maxspeed'),
           kind: 'slider',
-          valueLabel: maxSpeedKnots.toFixed(1),
+          valueLabel: Math.min(maxSpeedKnots, speedCap).toFixed(1),
           min: 0.5,
-          max: 4.5,
+          max: speedCap,
           step: 0.1,
-          curValue: maxSpeedKnots,
+          curValue: Math.min(maxSpeedKnots, speedCap),
           onValue: (v) => setMaxSpeedKnots(v),
           onLeft: () => setMaxSpeedKnots(Math.max(0.5, Math.round((maxSpeedKnots - 0.1) * 10) / 10)),
-          onRight: () => setMaxSpeedKnots(Math.min(4.5, Math.round((maxSpeedKnots + 0.1) * 10) / 10)),
+          onRight: () => setMaxSpeedKnots(Math.min(speedCap, Math.round((maxSpeedKnots + 0.1) * 10) / 10)),
         },
       );
     } else {

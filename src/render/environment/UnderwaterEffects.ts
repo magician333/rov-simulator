@@ -47,10 +47,10 @@ export class UnderwaterEffects {
       this.sun.shadow.mapSize.set(2048, 2048);
       this.sun.shadow.camera.near = 10;
       this.sun.shadow.camera.far = 700;
-      this.sun.shadow.camera.left = -150;
-      this.sun.shadow.camera.right = 150;
-      this.sun.shadow.camera.top = 150;
-      this.sun.shadow.camera.bottom = -150;
+      this.sun.shadow.camera.left = -60;
+      this.sun.shadow.camera.right = 60;
+      this.sun.shadow.camera.top = 60;
+      this.sun.shadow.camera.bottom = -60;
     }
     scene.add(this.sun);
 
@@ -129,6 +129,17 @@ export class UnderwaterEffects {
   setQuality(q: QualityLevel): void {
     this.quality = q;
     this.sun.castShadow = q !== 'low';
+    // low→high 切换时补配阴影相机与分辨率（构造时仅 high 初始化）
+    if (this.sun.castShadow) {
+      this.sun.shadow.mapSize.set(2048, 2048);
+      this.sun.shadow.camera.near = 10;
+      this.sun.shadow.camera.far = 700;
+      this.sun.shadow.camera.left = -60;
+      this.sun.shadow.camera.right = 60;
+      this.sun.shadow.camera.top = 60;
+      this.sun.shadow.camera.bottom = -60;
+      this.sun.shadow.camera.updateProjectionMatrix();
+    }
   }
 
   /**

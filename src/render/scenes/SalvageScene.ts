@@ -17,7 +17,7 @@ class SalvageSceneImpl implements SceneDefinition {
   readonly spawn = { position: [0, -1.2, 18] as [number, number, number], yawDeg: 0 };
   readonly localFlowZones = [];
   readonly colliders = [
-    { type: 'box' as const, position: new THREE.Vector3(-6, -9.5, -20), halfExtents: new THREE.Vector3(3.2, 2.2, 11) }, // 沉船
+    { type: 'box' as const, position: new THREE.Vector3(-6, -9.5, -20), halfExtents: new THREE.Vector3(5, 2.8, 11) }, // 沉船（覆盖旋转视觉船体）
     { type: 'sphere' as const, position: new THREE.Vector3(2, -9.6, -24), radius: 2.6 }, // 目标红箱
     { type: 'sphere' as const, position: new THREE.Vector3(-1, -9.2, -27), radius: 2.6 },
     { type: 'sphere' as const, position: new THREE.Vector3(4, -9.4, -21), radius: 2.6 },

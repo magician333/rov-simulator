@@ -64,7 +64,7 @@ export class AttitudeIndicator {
       new THREE.ConeGeometry(0.08, 0.2, 12),
       new THREE.MeshStandardMaterial({ color: 0x4fc3f7, emissive: 0x4fc3f7, emissiveIntensity: 0.8 }),
     );
-    nose.rotation.x = Math.PI / 2; // 圆锥尖朝 -Z
+    nose.rotation.x = -Math.PI / 2; // 圆锥尖朝 -Z
     nose.position.set(0, 0, -0.5);
     g.add(nose);
     return g;

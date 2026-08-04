@@ -16,10 +16,11 @@ class PipelineExtSceneImpl implements SceneDefinition {
   readonly environmentDefaults = { envModel: 'sea' as const, seaState: 1, currentDirectionDeg: 0, turbulence: 0.05, visibility: 20, turbidity: 0.2 };
   readonly spawn = { position: [0, -1.2, 38] as [number, number, number], yawDeg: 180 };
   readonly colliders = [
-    { type: 'box' as const, position: new THREE.Vector3(0, -10.2, 0), halfExtents: new THREE.Vector3(2.5, 0.9, 32) }, // 管道本体
-    // 支撑墩（管道两侧）
-    { type: 'box' as const, position: new THREE.Vector3(4, -11.5, 0), halfExtents: new THREE.Vector3(0.8, 1.2, 30) },
-    { type: 'box' as const, position: new THREE.Vector3(-4, -11.5, 0), halfExtents: new THREE.Vector3(0.8, 1.2, 30) },
+    // 管道本体（y 随地形与视觉 seabedHeight(0,0)+1.1 一致）
+    { type: 'box' as const, position: new THREE.Vector3(0, seabedHeight(0, 0) + 1.1, 0), halfExtents: new THREE.Vector3(2.5, 0.9, 32) },
+    // 支撑墩（与视觉 ±2.2 对齐）
+    { type: 'box' as const, position: new THREE.Vector3(2.2, -11.5, 0), halfExtents: new THREE.Vector3(0.8, 1.2, 30) },
+    { type: 'box' as const, position: new THREE.Vector3(-2.2, -11.5, 0), halfExtents: new THREE.Vector3(0.8, 1.2, 30) },
   ];
   readonly localFlowZones = [];
 

@@ -21,6 +21,8 @@ export interface SonarBeamHit {
 }
 
 export class SonarSimulator {
+  /** 距离衰减表缓存（rangeBins 变化时重建） */
+  private fadeTable = new Float32Array(0);
   private _image: Uint8ClampedArray;
   private params: SonarParams;
 
@@ -39,11 +41,12 @@ export class SonarSimulator {
 
   updateParams(patch: Partial<SonarParams>): void {
     const next = { ...this.params, ...patch };
-    // 频段切换（扇面/波束/bin 任一变化）重建图像，避免旧角度残留
+    // 频段/量程切换（扇面/波束/bin/量程任一变化）重建图像，避免旧刻度残留
     const resize =
       next.beamCount !== this.params.beamCount ||
       next.rangeBins !== this.params.rangeBins ||
-      next.sectorDeg !== this.params.sectorDeg;
+      next.sectorDeg !== this.params.sectorDeg ||
+      next.rangeM !== this.params.rangeM;
     this.params = next;
     if (resize) this._image = new Uint8ClampedArray(this.params.beamCount * this.params.rangeBins);
   }
@@ -72,16 +75,20 @@ export class SonarSimulator {
     // 衰减系数
     const att = 0.03 + env.turbidity * 0.24 + Math.max(0, 1 / Math.max(1, env.visibility)) * 0.18;
     const noiseFloor = 12 + noise * 38;
-    const rngBase = 0;
+    // 距离衰减表缓存（bin 索引 → exp(-d/rangeM)，避免每像素指数运算）
+    if (this.fadeTable.length !== rangeBins) {
+      this.fadeTable = new Float32Array(rangeBins);
+      for (let r = 0; r < rangeBins; r++) this.fadeTable[r] = 0.45 + 0.55 * Math.exp(-r / rangeBins);
+    }
 
-    // 1) 刷新这些列的稀疏底噪 + 远处散射渐弱
+    // 1) 刷新这些列的稀疏底噪 + 远处散射渐弱（LCG 伪随机替代 sin，省浮点特殊函数）
     for (let b = 0; b < count; b++) {
       const col = startBeam + b;
+      let seed = (col * 2654435761) >>> 0;
       for (let r = 0; r < rangeBins; r++) {
-        const idx = col * rangeBins + r;
-        const h = Math.sin(rngBase + idx * 12.9898) * 43758.5453;
-        const d = (r / rangeBins) * rangeM;
-        this._image[idx] = noiseFloor * (0.5 + 0.5 * (h - Math.floor(h))) * (0.45 + 0.55 * Math.exp(-d / rangeM));
+        seed = (seed * 1664525 + 1013904223) >>> 0;
+        const frac = seed / 4294967296;
+        this._image[col * rangeBins + r] = noiseFloor * (0.5 + 0.5 * frac) * this.fadeTable[r];
       }
     }
 

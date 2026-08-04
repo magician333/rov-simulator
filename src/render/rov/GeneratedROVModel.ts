@@ -337,12 +337,13 @@ export class GeneratedROVModel {
 
     // M2：方形塑料把手嵌套在侧边上下外框管上（比管径稍大，每侧上下各一）
     if (this.variant === 'm2') {
-      const { width } = this.cfg.dimensions;
+      const { width, length: len } = this.cfg.dimensions;
       const hx = width / 2;
       const handleMat = this.matFrame;
+      const gripLen = len * 0.47; // 沿机身方向（随机型尺寸推导）
       for (const sx of [hx, -hx]) {
         for (const sy of [hy - 0.02, -hy + 0.02]) {
-          const grip = new THREE.Mesh(new THREE.BoxGeometry(0.055, 0.055, 0.34), handleMat);
+          const grip = new THREE.Mesh(new THREE.BoxGeometry(0.055, 0.055, gripLen), handleMat);
           grip.position.set(sx, sy, 0);
           this.root.add(grip);
         }

@@ -176,3 +176,32 @@ Chronological record of the project, milestones and key decisions. Useful for on
 - M2S side handles lengthened (0.20 → 0.34 along the frame rails).
 - M2S top yellow buoyancy block removed (visual only; physics unchanged).
 - M2S top antenna removed (slim line gone).
+
+## M23 — Deep review round 2 (3 parallel sub-agents + parent audit), fixes
+
+**Smoke test**: adapted to the motor-lock system — `resetSim()` unlocks motors after every reset (was running all thruster cases powerless → false-green).
+
+**Core fixes**
+- M2S gets `attitudeLimits { pitchDeg:75, rollDeg:75 }` — keeps full agility but avoids Euler decomposition flip (world mode / level / HUD rely on YXZ Euler).
+- DVL hover only active when motors unlocked (lock semantics no longer masked by virtual PD hold).
+- Speed limit smoothed: 10% band linear cut (no hard 0 cut, kills limit-cycle jitter); verified 3.00 kn on M2S.
+- Level-attitude rejected while motors locked (no PD spin on dead thrusters; PhysicsWorld syncs lock to controller).
+- `controllableAxes` cached as a Set (no per-step string includes).
+- Sonar image rebuilt when `rangeM` changes (no stale-scale residue).
+
+**Sonar perf**
+- Noise rewritten from per-pixel `Math.sin` to integer LCG; distance fade precomputed as a `Float32Array` table per rangeBins (≈23万 special-func calls/s removed).
+- `SonarSampler`: tilts cached per `verticalDeg`; removed redundant `filter` before sort/merge.
+
+**UI fixes**
+- `help_guide` newlines now render (`whiteSpace: pre-line`).
+- Space tap no longer toggles motor lock while paused / on result dialogs (down & up guarded).
+- Speed slider max follows the vehicle `hardMaxSpeedKnots` (M2S shows max 3.0 instead of 4.5).
+- `setTaskState` only fires on structural change (phase / step / completed count / integer second) — kills 100 ms full-tree re-render of TrainingScreen.
+- Removed dead `brightBuf` fill; cleared `grabMsgTimer` in cleanup; deduped duplicated top-bar info chips; `VIEW:` label i18n; removed dead i18n keys and unused `sceneNames.ts`.
+
+**Scene collider alignment (no more pass-through)**
+- PipelineExt supports ±2.2 (was ±4) & pipe collider y follows `seabedHeight(0,0)+1.1`; Ship bow extended to z≈-28 (bulbous bow); Bridge deck collider added; OilRig legs enlarged to r1.8/y-11.5..8.5; Salvage hull AABB widened.
+
+**Render fixes**
+- `UnderwaterEffects.setQuality` re-configures shadow camera (±60) & mapSize on low→high; `Engine.setQuality` rebuilds PMREM env map if missing; `Engine.quality` set in constructor; AttitudeIndicator nose cone direction fixed (now points -Z).

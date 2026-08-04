@@ -251,10 +251,6 @@ function drawSonar(
   const { beamCount, rangeBins, rangeM } = p;
   const rnd = Math.random;
 
-  // 亮度 buffer（单通道 v，max 合并）
-  if (!brightBuf || brightBuf.length !== W * H) brightBuf = new Uint8ClampedArray(W * H);
-  brightBuf.fill(0);
-
   // 1+2) 写入亮度 + 调色板映射（单次遍历，复用 ImageData）
   if (!imageDataBuf || imageDataBuf.width !== W || imageDataBuf.height !== H) imageDataBuf = ctx.createImageData(W, H);
   const data = imageDataBuf.data;
@@ -325,8 +321,7 @@ function drawSonar(
   ctx.fillText(`beam ×${beamCount} · bin ×${rangeBins} · ${p.sectorDeg}°`, 8, H - 8);
 }
 
-/** 亮度 buffer / ImageData 缓存（避免每帧分配） */
-let brightBuf: Uint8ClampedArray | null = null;
+/** ImageData 缓存（避免每帧分配） */
 let imageDataBuf: ImageData | null = null;
 
 const styles: Record<string, React.CSSProperties> = {

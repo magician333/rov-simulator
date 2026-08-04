@@ -498,3 +498,12 @@
 ## 本轮（M2S 把手加长/去浮力块/去天线）
 - 侧边把手沿管加长 0.2→0.34
 - 取消顶部黄色浮力块（仅视觉）与顶部天线（M2）
+
+## 本轮（深度审查第二轮 + 全量修复）
+- 3 协作子会话审查（core/render/ui）+ 父会话自审；冒烟测试适配电机锁（resetSim 解锁）
+- 修复：M2S attitudeLimits ±75（防欧拉翻转失真）、DVL 锁定时不保持、限速平滑 10% band、锁定时拒一键水平、controllableAxes Set 缓存、声纳 rangeM resize
+- 声纳性能：底噪 sin→LCG、距离衰减查表、tilts 缓存、去 filter
+- UI：help_guide 换行、暂停空格守卫、滑块 max 按机型硬限、setTaskState 结构变化才更新、brightBuf 死代码删、grabMsgTimer 清理、infoChip 去重、VIEW i18n、死 key 清理、sceneNames.ts 删除
+- 场景 collider 对齐：PipelineExt 支撑墩 ±2.2/管道 y 动态、Ship 船艏延长、Bridge deck、OilRig 腿扩大、Salvage 沉船扩大
+- 渲染：setQuality 补阴影相机/PMREM、Engine.quality 构造赋值、姿态仪圆锥方向
+- 回归：build/smoke/dev 通过；M2S roll 2s=75.0（限位）、pitch 8s=75.0 roll=0、locked+DVL 正常上浮
