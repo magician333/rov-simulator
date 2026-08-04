@@ -98,7 +98,7 @@ npm run build
 | `X` tap / hold | Switch view / HUD layout |
 | `Y` tap / hold | Level attitude / control frame |
 | `Start` | Open settings menu |
-| `Back` tap / hold | Sonar on-off / HUD layout |
+| `Back` tap / hold | Sonar on-off / sonar freq switch |
 | D-pad | Menu navigation (LB/RB switch tabs) |
 
 ### Mission workflow

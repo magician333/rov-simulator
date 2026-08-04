@@ -46,6 +46,8 @@ interface AppState {
   viewMode: ViewMode;
   /** 声纳面板独立开关（任意主视角下可显示/拖动） */
   sonarVisible: boolean;
+  /** 声纳频段（手柄 Back 长按切换；不持久化） */
+  sonarFreq: 'high' | 'low';
   axisMode: AxisMode;
   envParams: EnvironmentParams;
   rovControls: RovControlState;
@@ -86,6 +88,7 @@ interface AppState {
   selectScene(id: string): void;
   setViewMode(mode: ViewMode): void;
   setSonarVisible(v: boolean): void;
+  setSonarFreq(f: 'high' | 'low'): void;
   setAxisMode(mode: AxisMode): void;
   setTaskState(state: TaskStateView | null): void;
   setTaskResult(result: 'completed' | 'failed' | null, durationSec?: number): void;
@@ -117,6 +120,7 @@ export const useAppStore = create<AppState>()(
   selectedSceneId: 'salvage',
   viewMode: 'chase',
   sonarVisible: false,
+  sonarFreq: 'high',
   axisMode: 'body',
   envParams: { ...DEFAULT_ENV_PARAMS },
   rovControls: { lightsOn: false, maxSpeedKnots: 4.5 },
@@ -144,6 +148,7 @@ export const useAppStore = create<AppState>()(
   selectScene: (id) => set({ selectedSceneId: id }),
   setViewMode: (mode) => set({ viewMode: mode }),
   setSonarVisible: (sonarVisible) => set({ sonarVisible }),
+  setSonarFreq: (sonarFreq) => set({ sonarFreq }),
   setAxisMode: (mode) => set({ axisMode: mode }),
   setTaskState: (taskState) => set({ taskState }),
   setTaskResult: (taskResult, durationSec) => set({ taskResult, taskDurationSec: durationSec ?? 0 }),

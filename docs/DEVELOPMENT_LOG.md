@@ -131,3 +131,11 @@ Chronological record of the project, milestones and key decisions. Useful for on
 - POV corner motor status shows just "Unlocked / Locked" (no label, no emoji); bottom bar keeps the bold "⚡ Motors Locked".
 - Sonar: seabed echo generated only by the lowest sub-ray with a single main echo (no more parallel arc ghost lines); frequency switching rebuilds the image when the sector angle changes (no stale 120° remnants after switching back to high).
 - Help panel now has **two tabs: Keyboard / Gamepad** with full gamepad mapping (sticks, D-pad, LB/RB, A/B/X/Y, Start/Back).
+
+## M17 — POV motor readouts, sonar residue & freq hotkeys
+
+- POV corner motor readout keeps its blue label, value now just "Locked / Unlocked".
+- POV HUD mode bottom info bar shows motor status before speed (same style).
+- Sonar: reused ImageData is zeroed each draw (kills stale fan remnants after high/low switch); frequency switches via `Back` hold; freq lives in the store (`sonarFreq`, not persisted) so keyboard/gamepad share it.
+- Sonar header split: title + meta on row 1, all buttons on row 2 (no wrap from 40m vs 120m width).
+- Help panel & README updated for Back hold = freq switch.

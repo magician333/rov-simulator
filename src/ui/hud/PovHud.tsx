@@ -115,7 +115,7 @@ function CornerLayout(props: {
             <Readout label={t('hud_roll')} value={hud.rollDeg.toFixed(1)} unit="°" size={18} />
             <Readout label={t('hud_speed')} value={hud.speedKnots.toFixed(1)} unit="kn" size={18} />
             <Readout
-              label=" "
+              label={t('hud_motor')}
               value={hud.motorLocked ? t('motor_state_locked') : t('motor_state_unlocked')}
               size={16}
               warn={hud.motorLocked}
@@ -181,6 +181,11 @@ function HudLayout(props: {
 
       {/* 下方：信息条（半透明，避开状态栏） */}
       <div style={infoBarStyle}>
+        <InfoItem
+          label={t('hud_motor')}
+          value={hud.motorLocked ? t('motor_state_locked') : t('motor_state_unlocked')}
+          color={hud.motorLocked ? '#ffab91' : '#8ad5f5'}
+        />
         <InfoItem label={t('hud_speed')} value={`${hud.speedKnots.toFixed(1)} kn`} />
         <InfoItem label={t('hud_temp')} value={`${fmtTemp(hud.temperatureC, units)} ${um.temp}`} />
         <InfoItem label={t('hud_frame')} value={props.frameTxt} />
@@ -203,11 +208,11 @@ function HudLayout(props: {
   );
 }
 
-function InfoItem({ label, value }: { label: string; value: string }) {
+function InfoItem({ label, value, color = '#e8f8ff' }: { label: string; value: string; color?: string }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, minWidth: 90 }}>
       <span style={{ fontSize: 10, color: '#7fb3c9', letterSpacing: 1 }}>{label}</span>
-      <span style={{ fontSize: 17, color: '#e8f8ff', fontFamily: 'Consolas, Menlo, monospace', textShadow: '0 0 6px rgba(0,0,0,.9)' }}>{value}</span>
+      <span style={{ fontSize: 17, color, fontFamily: 'Consolas, Menlo, monospace', textShadow: '0 0 6px rgba(0,0,0,.9)' }}>{value}</span>
     </div>
   );
 }

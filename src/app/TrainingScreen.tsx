@@ -386,14 +386,14 @@ export function TrainingScreen() {
         }
       }
       if (b(9) && !prevBtns[9]) useAppStore.getState().setSettingsOpen(true); // Start 打开菜单
-      // Back：短按 = 声纳开关；长按(≥400ms) = 切换 HUD/角落模式
+      // Back：短按 = 声纳开关；长按(≥400ms) = 声纳高低频切换
       if (b(8) && !prevBtns[8]) backStart = Date.now();
       if (!b(8) && prevBtns[8]) {
         if (Date.now() - backStart < 400) {
           useAppStore.getState().setSonarVisible(!useAppStore.getState().sonarVisible);
         } else {
-          const cur = useAppStore.getState().hudLayout;
-          useAppStore.getState().setHudLayout(cur === 'corner' ? 'hud' : 'corner');
+          const cur = useAppStore.getState().sonarFreq;
+          useAppStore.getState().setSonarFreq(cur === 'high' ? 'low' : 'high');
         }
       }
       for (let i = 0; i < 16; i++) prevBtns[i] = b(i);

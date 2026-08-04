@@ -57,7 +57,9 @@ export function SonarView({ engineRef }: { engineRef: React.MutableRefObject<Eng
   const samplerRef = useRef<SonarSampler | null>(null);
   const simulatorRef = useRef<SonarSimulator | null>(null);
   const [params, setParams] = useState<SonarParams>({ ...DEFAULT_SONAR_PARAMS });
-  const [freq, setFreq] = useState<SonarFreqMode>('high');
+  // 频段由全局 store 驱动（键盘/手柄 Back 长按可切换）
+  const freq = useAppStore((s) => s.sonarFreq);
+  const setSonarFreq = useAppStore((s) => s.setSonarFreq);
   const [palette, setPalette] = useState<Palette>('fire');
   const [fullscreen, setFullscreen] = useState(false);
   const [showControls, setShowControls] = useState(false);
@@ -77,7 +79,7 @@ export function SonarView({ engineRef }: { engineRef: React.MutableRefObject<Eng
 
   // 频率切换：低频 = 远程低分辨率；高频 = 近程高分辨率
   const switchFreq = (mode: SonarFreqMode) => {
-    setFreq(mode);
+    setSonarFreq(mode);
     setParams((p) => ({ ...FREQ_PRESETS[mode], gain: p.gain, noise: p.noise }));
   };
 
@@ -172,6 +174,9 @@ export function SonarView({ engineRef }: { engineRef: React.MutableRefObject<Eng
       >
         <span style={styles.title}>SONAR {t(freq === 'low' ? 'sonar_freq_low' : 'sonar_freq_high')}·{params.rangeM}m</span>
         <MetaReadout />
+      </div>
+      {/* 按钮统一第二行（避免量程字符宽度差异导致换行） */}
+      <div style={styles.btnRow}>
         <button onClick={() => switchFreq(freq === 'low' ? 'high' : 'low')} style={styles.btn}>
           {freq === 'low' ? t('sonar_switch_to_high') : t('sonar_switch_to_low')}
         </button>
@@ -250,6 +255,7 @@ function drawSonar(
   // 1+2) 写入亮度 + 调色板映射（单次遍历，复用 ImageData）
   if (!imageDataBuf || imageDataBuf.width !== W || imageDataBuf.height !== H) imageDataBuf = ctx.createImageData(W, H);
   const data = imageDataBuf.data;
+  data.fill(0); // 清空残留像素（切换高低频后避免旧扇形残留）
   for (let py = 0; py < H; py++) {
     const dy = py - cy;
     for (let px = 0; px < W; px++) {
@@ -333,6 +339,13 @@ const styles: Record<string, React.CSSProperties> = {
   header: { display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6, cursor: 'move', userSelect: 'none', flexWrap: 'wrap' },
   title: { fontWeight: 700, color: '#4fc3f7', fontSize: 13, letterSpacing: 1, whiteSpace: 'nowrap' },
   meta: { fontSize: 12, color: '#9cc5d9', flex: 1, whiteSpace: 'nowrap' },
+  btnRow: {
+    display: 'flex',
+    gap: 6,
+    padding: '4px 8px',
+    flexWrap: 'wrap',
+    background: 'rgba(2, 18, 30, 0.55)',
+  },
   btn: {
     background: 'rgba(79,195,247,.15)', color: '#d7eef8', border: '1px solid #2a6d8f',
     borderRadius: 6, padding: '3px 10px', cursor: 'pointer', fontSize: 12, whiteSpace: 'nowrap',
