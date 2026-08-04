@@ -707,7 +707,6 @@ export function TrainingScreen() {
             : `${t('help_grab')} · ${t('grip_open')} ${Math.round(gripperOpen * 100)}%`}
         </span>
         {grabMsg && <span style={{ color: '#ff8a65' }}>{grabMsg}</span>}
-        {unlockMsg && <span style={{ color: '#ff7043', fontWeight: 700 }}>{t('hint_unlock_first')}</span>}
         <span style={styles.infoChip}>{t('set_hud_layout')}: {t(hudLayout === 'corner' ? 'val_corner' : 'val_hud')}</span>
         <span style={styles.infoChip}>{units === 'imperial' ? 'ft / ℉' : 'm / ℃'}</span>
       </div>
@@ -722,6 +721,13 @@ export function TrainingScreen() {
         onEnvParam={setEnvParam}
         onResetEnv={resetEnvParams}
       />
+
+      {/* 电机锁定提示 toast（半透明弹窗，居中） */}
+      {unlockMsg && (
+        <div style={styles.toastOverlay}>
+          <div style={styles.toastBox}>{t('hint_unlock_first')}</div>
+        </div>
+      )}
 
       {helpOpen && <HelpPanel t={t} onClose={() => setHelpOpen(false)} />}
 
@@ -783,8 +789,10 @@ function HudStatusBar() {
 }
 
 /** 操作帮助面板（顶栏帮助按钮展开，右侧区域） */
+/** 操作帮助：键盘 / 手柄 双 tab */
 function HelpPanel({ t, onClose }: { t: (k: DictKey, vars?: Record<string, string | number>) => string; onClose: () => void }) {
-  const rows: [string, string][] = [
+  const [tab, setTab] = useState<'keys' | 'pad'>('keys');
+  const keyRows: [string, string][] = [
     ['W / S', t('help_fwd')],
     ['A / D', t('help_left')],
     ['E / Q', t('help_up')],
@@ -795,16 +803,42 @@ function HelpPanel({ t, onClose }: { t: (k: DictKey, vars?: Record<string, strin
     ['B', t('help_level')],
     ['L', t('set_lights')],
     ['I', t('help_sonar')],
-    ['Space / A', t('help_motor')],
+    ['Space', t('help_motor')],
     ['Esc', t('help_pause')],
-    ['🎮 ' + t('menu_key'), t('menu_key') + ' · ' + t('back_key')],
-    ['🎮 ' + t('pad_hint').split('·')[0], t('pad_hint')],
   ];
+  const padRows: [string, string][] = [
+    ['L-Stick', t('help_pad_lstick')],
+    ['R-Stick', t('help_pad_rstick')],
+    ['D-Pad', t('help_pad_dpad')],
+    ['LB / RB', t('help_pad_bumpers')],
+    ['A', t('help_pad_a')],
+    ['B', t('help_pad_b')],
+    ['X', t('help_pad_x')],
+    ['Y', t('help_pad_y')],
+    ['Start', t('help_pad_start')],
+    ['Back', t('help_pad_back')],
+  ];
+  const rows = tab === 'keys' ? keyRows : padRows;
+  const tabBtn = (id: 'keys' | 'pad', label: string) => (
+    <button
+      onClick={() => setTab(id)}
+      style={{
+        ...styles.btn,
+        ...(tab === id ? { background: 'rgba(79, 195, 247, 0.25)', borderColor: '#4fc3f7' } : {}),
+      }}
+    >
+      {label}
+    </button>
+  );
   return (
     <div style={styles.helpPanelStyle}>
-      <div style={{ fontSize: 14, fontWeight: 700, color: '#a9d3e8', marginBottom: 10, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <div style={{ fontSize: 14, fontWeight: 700, color: '#a9d3e8', marginBottom: 8, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         {t('help_title')}
         <button onClick={onClose} style={{ background: 'transparent', border: 'none', color: '#9cc5d9', cursor: 'pointer', fontSize: 18 }}>✕</button>
+      </div>
+      <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
+        {tabBtn('keys', '⌨ ' + t('help_tab_keys'))}
+        {tabBtn('pad', '🎮 ' + t('help_tab_pad'))}
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
         {rows.map(([k, d]) => (
@@ -853,6 +887,28 @@ const styles: Record<string, React.CSSProperties> = {
   infoChip: {
     fontSize: 12, color: '#9cc5d9',
     whiteSpace: 'nowrap',
+  },
+  toastOverlay: {
+    position: 'fixed',
+    top: 0,
+    left: 0,
+    right: 0,
+    display: 'flex',
+    justifyContent: 'center',
+    pointerEvents: 'none',
+    zIndex: 300,
+  },
+  toastBox: {
+    marginTop: '16vh',
+    background: 'rgba(10, 25, 34, 0.78)',
+    border: '1px solid rgba(255, 112, 67, 0.5)',
+    color: '#ffab91',
+    fontWeight: 700,
+    fontSize: 15,
+    padding: '12px 22px',
+    borderRadius: 10,
+    boxShadow: '0 6px 24px rgba(0, 0, 0, 0.4)',
+    letterSpacing: 1,
   },
   helpPanelStyle: {
     position: 'absolute', top: 56, right: 12, zIndex: 15, width: 330,

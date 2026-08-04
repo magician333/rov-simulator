@@ -124,3 +124,10 @@ Chronological record of the project, milestones and key decisions. Useful for on
 - **Motor lock system**: every training starts with motors **locked** — no thruster force (vehicle drifts up like before). Tap Space / gamepad A to unlock/lock. When unlocked and idle, the physics applies a hover compensation (net-buoyancy cancel + lateral damping) so the vehicle holds position; thrusters show a slight idle spin. Lock status shown bold in the bottom status bar (before speed) and in the POV corner box; locked inputs show "Unlock motors first". Help panel & README updated.
 - **Tether removed**: deleted `Tether.ts`; all tether hooks removed from `PhysicsWorld`, `SimulationEngine`, `Engine`, store, HUD, i18n (bundle −4.3 kB gzip).
 - Verified: locked 3 s drifts to 9.80 m depth; unlocked 3/6 s holds 10.00 m at 0 kn.
+
+## M16 — UX polish (toast, HUD text, sonar artifacts, help tabs)
+
+- Unlock-first hint is now a **semi-transparent centered toast** (2.5 s) instead of a bottom bar text.
+- POV corner motor status shows just "Unlocked / Locked" (no label, no emoji); bottom bar keeps the bold "⚡ Motors Locked".
+- Sonar: seabed echo generated only by the lowest sub-ray with a single main echo (no more parallel arc ghost lines); frequency switching rebuilds the image when the sector angle changes (no stale 120° remnants after switching back to high).
+- Help panel now has **two tabs: Keyboard / Gamepad** with full gamepad mapping (sticks, D-pad, LB/RB, A/B/X/Y, Start/Back).

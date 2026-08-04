@@ -115,8 +115,8 @@ function CornerLayout(props: {
             <Readout label={t('hud_roll')} value={hud.rollDeg.toFixed(1)} unit="°" size={18} />
             <Readout label={t('hud_speed')} value={hud.speedKnots.toFixed(1)} unit="kn" size={18} />
             <Readout
-              label={t('hud_motor')}
-              value={hud.motorLocked ? t('motor_locked') : t('motor_unlocked')}
+              label=" "
+              value={hud.motorLocked ? t('motor_state_locked') : t('motor_state_unlocked')}
               size={16}
               warn={hud.motorLocked}
             />

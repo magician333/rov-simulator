@@ -83,19 +83,16 @@ export class SonarSampler {
       const echoes: SonarBeamHit[] = [];
 
       // 垂直开角内多条子射线（上仰/水平/俯角），先局部方向再乘姿态
-      for (const tilt of tilts) {
+      for (let ti = 0; ti < tilts.length; ti++) {
+        const tilt = tilts[ti];
         const cosT = Math.cos(tilt);
         const sinT = Math.sin(tilt);
         this.dir.set(-sinOff * cosT, sinT, -cosOff * cosT).applyQuaternion(this.attQuat);
         this.collectEchoes(echoes, position, rangeM);
-        // 向下子射线追加海底回波段（解析 ray-march）
-        if (sinT < 0) {
+        // 海底回波：仅最下方子射线（首条）追加单条主回波，避免多条平行弧线
+        if (ti === 0 && sinT < 0) {
           const sd = rayMarchSeafloor(position, this.dir, rangeM);
-          if (sd !== null) {
-            echoes.push({ distance: sd, strength: 0.6 });
-            echoes.push({ distance: sd + 1.2, strength: 0.4 });
-            echoes.push({ distance: sd + 2.4, strength: 0.2 });
-          }
+          if (sd !== null) echoes.push({ distance: sd, strength: 0.6 });
         }
       }
 

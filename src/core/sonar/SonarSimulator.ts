@@ -39,7 +39,11 @@ export class SonarSimulator {
 
   updateParams(patch: Partial<SonarParams>): void {
     const next = { ...this.params, ...patch };
-    const resize = next.beamCount !== this.params.beamCount || next.rangeBins !== this.params.rangeBins;
+    // 频段切换（扇面/波束/bin 任一变化）重建图像，避免旧角度残留
+    const resize =
+      next.beamCount !== this.params.beamCount ||
+      next.rangeBins !== this.params.rangeBins ||
+      next.sectorDeg !== this.params.sectorDeg;
     this.params = next;
     if (resize) this._image = new Uint8ClampedArray(this.params.beamCount * this.params.rangeBins);
   }
