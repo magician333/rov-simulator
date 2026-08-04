@@ -61,7 +61,7 @@ export class GeneratedROVModel {
       this.matFrame = new THREE.MeshStandardMaterial({ color: 0xb8bec4, roughness: 0.5, metalness: 0.55, map: getTexture('deepmetal') });
       this.matBuoyancy = new THREE.MeshStandardMaterial({ color: 0xf2c94c, roughness: 0.55, metalness: 0.15 });
       this.matHull = new THREE.MeshStandardMaterial({ color: 0xb8bec4, roughness: 0.45, metalness: 0.6, map: getTexture('deepmetal') });
-      this.matDuct = new THREE.MeshStandardMaterial({ color: 0xffc400, roughness: 0.4, metalness: 0.45 });
+      this.matDuct = new THREE.MeshStandardMaterial({ color: 0x23262b, roughness: 0.45, metalness: 0.55 });
       this.matRotor = new THREE.MeshStandardMaterial({ color: 0xffe600, roughness: 0.3, metalness: 0.5 });
       this.matArm = new THREE.MeshStandardMaterial({ color: 0x8d9096, roughness: 0.45, metalness: 0.6 });
       this.matGripper = new THREE.MeshStandardMaterial({ color: 0xf2c94c, roughness: 0.5, metalness: 0.3 });

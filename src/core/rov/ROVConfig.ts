@@ -55,6 +55,8 @@ export interface ROVConfig {
   visualVariant?: 'standard' | 'm2';
   /** 转动响应缩放（1=默认；如 M2S 俯仰/横滚 ×2） */
   torqueScale?: { yaw?: number; pitch?: number; roll?: number };
+  /** 姿态角限制（度）：缺省不限制；如通用 ROV 俯仰 ±60°、横滚 ±45° */
+  attitudeLimits?: { pitchDeg?: number; rollDeg?: number };
   /** 最大前进航速（节） */
   maxSpeedKnots: number;
   /** 最大侧向航速（节，可选；缺省 = maxSpeedKnots） */
@@ -99,6 +101,8 @@ const DEG = Math.PI / 180;
 export const DEFAULT_ROV_CONFIG: ROVConfig = {
   id: 'rov_6dof_standard',
   name: '通用 6 自由度 ROV',
+  // 姿态限制：俯仰 ±60°、横滚 ±45°
+  attitudeLimits: { pitchDeg: 60, rollDeg: 45 },
   description: '标准 8 推进器矢量布局，可独立控制全部六个自由度。',
   model: { type: 'generated' },
   maxSpeedKnots: 3,
@@ -174,7 +178,7 @@ export const CHASING_M2_CONFIG: ROVConfig = {
   visualVariant: 'm2',
   maxSpeedKnots: 3,
   // 俯仰/横滚灵活性 +100%（转动响应 ×2，更轻盈）
-  torqueScale: { yaw: 1, pitch: 2, roll: 2 },
+  torqueScale: { yaw: 1, pitch: 4, roll: 4 },
   maxSwaySpeedKnots: 1.5,
   maxHeaveSpeedKnots: 1.5,
   massKg: 30,

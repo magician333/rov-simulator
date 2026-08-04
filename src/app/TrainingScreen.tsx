@@ -672,6 +672,7 @@ export function TrainingScreen() {
   }, [selectedSceneId, setTaskState, setTaskResult, setPaused]);
 
   const sceneName = t('scene_' + selectedSceneId + '_name' as DictKey);
+  const rovName = t(('rov_' + selectedRovId + '_name') as DictKey);
 
   return (
     <div style={styles.root}>
@@ -680,7 +681,7 @@ export function TrainingScreen() {
       <div style={styles.topBar}>
         <button onClick={gotoMenu} style={styles.btn}>{t('training_menu')}</button>
         <span style={styles.sceneName}>{sceneName}</span>
-        <span style={styles.rovName}>{simRef.current?.rovConfig.name ?? ''}</span>
+        <span style={styles.rovName}>{rovName}</span>
         <span style={{ flex: 1 }} />
         {envDirty && <span style={styles.envDirty}>{t('env_dirty')}</span>}
         {/* 参数信息展示（仅展示，不可调） */}

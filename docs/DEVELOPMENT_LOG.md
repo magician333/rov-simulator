@@ -139,3 +139,10 @@ Chronological record of the project, milestones and key decisions. Useful for on
 - Sonar: reused ImageData is zeroed each draw (kills stale fan remnants after high/low switch); frequency switches via `Back` hold; freq lives in the store (`sonarFreq`, not persisted) so keyboard/gamepad share it.
 - Sonar header split: title + meta on row 1, all buttons on row 2 (no wrap from 40m vs 120m width).
 - Help panel & README updated for Back hold = freq switch.
+
+## M18 — Full zh naming, M2S visuals/tuning, attitude limits
+
+- TrainingScreen vehicle name now uses i18n (`rov_<id>_name`) → shows "潜鲛P100 S" everywhere in Chinese.
+- M2S thrusters: duct black, blades bright yellow plastic.
+- Generic ROV gets `attitudeLimits` { pitch ±60°, roll ±45° } clamped each physics step (verified 60.0°/45.0° steady-state).
+- M2S pitch/roll torque scale raised 2× → 4× (roll 2 s ≈ 75.4°, +50% faster than before; no attitude limit on M2S).

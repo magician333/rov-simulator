@@ -45,6 +45,7 @@ export class PhysicsWorld {
   private readonly fWorld = new THREE.Vector3();
   private readonly currentWorld = new THREE.Vector3();
   private readonly invQuat = new THREE.Quaternion();
+  private readonly attitudeEuler = new THREE.Euler();
   private lastNorm: number[] = [];
 
   /** ROV 碰撞半径（m） */
@@ -114,6 +115,31 @@ export class PhysicsWorld {
     this.body.setPose(position, quaternion);
   }
 
+  /** 姿态角钳制（机型 attitudeLimits；限制后角速度法向分量归零防止反复越界） */
+  private clampAttitude(): void {
+    const lim = this.body.config.attitudeLimits;
+    if (!lim) return;
+    const maxP = lim.pitchDeg !== undefined ? (lim.pitchDeg * Math.PI) / 180 : undefined;
+    const maxR = lim.rollDeg !== undefined ? (lim.rollDeg * Math.PI) / 180 : undefined;
+    if (maxP === undefined && maxR === undefined) return;
+    const e = this.attitudeEuler.setFromQuaternion(this.body.quaternion, 'YXZ');
+    let changed = false;
+    if (maxP !== undefined) {
+      const cx = Math.max(-maxP, Math.min(maxP, e.x));
+      if (Math.abs(cx - e.x) > 1e-9) changed = true;
+      e.x = cx;
+    }
+    if (maxR !== undefined) {
+      const cz = Math.max(-maxR, Math.min(maxR, e.z));
+      if (Math.abs(cz - e.z) > 1e-9) changed = true;
+      e.z = cz;
+    }
+    if (changed) {
+      this.body.quaternion.setFromEuler(e);
+      this.body.quaternion.normalize();
+    }
+  }
+
   /** 单物理步（dt = FIXED_DT） */
   step(dt: number): PhysicsStepResult {
     this.time += dt;
@@ -156,6 +182,9 @@ export class PhysicsWorld {
     const alpha = this.body.angularAcceleration(this.tauBody);
     this.body.omegaBody.addScaledVector(alpha, dt);
     integrateQuaternion(this.body.quaternion, this.body.omegaBody, dt);
+
+    // 姿态角限制（通用 ROV：俯仰 ±60°、横滚 ±45°）
+    this.clampAttitude();
 
     // DVL 悬停保持：无控制输入时锁定位置（PD 反馈 + 速度阻尼）
     if (this.dvlOn) {

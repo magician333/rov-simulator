@@ -468,3 +468,9 @@
 - 手柄 Back：短按声纳开关 / 长按高低频切换（store sonarFreq 驱动，帮助+README 同步）
 - 声纳按钮统一第二行（标题+meta 第一行）
 - 回归 build/smoke/dev 通过
+
+## 本轮（中文名全位置/M2S外观/姿态限制/机动性4x）
+- TrainingScreen 机型名改走 i18n（中文全位置 潜鲛P100 S，含场景左上角）
+- M2S 推进器：导管黑色、叶片亮黄
+- 通用 ROV：attitudeLimits 俯仰±60°/横滚±45°（物理每步 clamp，验证 60.0/45.0）
+- M2S torqueScale pitch/roll 2→4（roll 2s 75.4°，再 +100%）
