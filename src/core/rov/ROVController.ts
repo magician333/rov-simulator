@@ -109,7 +109,9 @@ export class ROVController {
 
   /** 按最大航速反标定 surge 推力上限（稳态 F = 0.5·ρ·CdA·v²） */
   setMaxSpeedKnots(kn: number): void {
-    const clamped = Math.min(Math.max(kn, 0.5), 4.5);
+    // 上限 = 机型硬限速（缺省 4.5）；M2S hardMaxSpeedKnots=3 → 滑块调到 4.5 也被钳制
+    const cap = this.config.hardMaxSpeedKnots ?? 4.5;
+    const clamped = Math.min(Math.max(kn, 0.5), cap);
     const v = kn2ms(clamped);
     const cdA = this.config.dragCoeffs.lin[2];
     this.surgeMaxForce = 0.5 * SEAWATER_DENSITY * cdA * v * v;

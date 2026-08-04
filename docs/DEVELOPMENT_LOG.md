@@ -153,3 +153,9 @@ Chronological record of the project, milestones and key decisions. Useful for on
 - M2S frame tubes thickened (r 0.022 → 0.038) and material switched to light-gray plastic (roughness 0.62 / metalness 0.08).
 - Hard speed limit: thrust cut to zero beyond 2% over-limit band — M2S full throttle now holds exactly 3.00 kn (was overshooting ~4+).
 - Attitude clamp now zeroes angular velocity on reached-limit axes — sustained pitch at ±60° no longer induces roll drift (verified pitch 60.0 / roll 0.0).
+
+## M20 — M2S 16× agility, square side handles, hard speed cap
+
+- M2S pitch/roll torque scale 8× → 16× (roll 2 s ≈ 103°, near agile limit).
+- M2S adds square light-gray plastic carry handles on both sides of the frame (Box-bars vertical loops).
+- Hard per-vehicle speed cap: `hardMaxSpeedKnots` — M2S clamps to 3 kn even if the UI speed slider is 4.5 (verified: slider 4.5 → actual 3.00 kn; generic ROV unaffected, 4.52 kn).

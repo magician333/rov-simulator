@@ -480,3 +480,8 @@
 - M2S 外框管材 r 0.022→0.038 加粗 + 浅灰塑料（roughness 0.62/metalness 0.08）
 - 硬限速：超速带 2% 内线性归零推力 → M2S 全油门稳定 3.00 节（不再 4+）
 - clampAttitude 越界轴角速度归零 → 俯仰 60° 时 roll 保持 0（不再诱发横滚）
+
+## 本轮（M2S 16x机动/方形提手/机型硬航速上限）
+- M2S torqueScale 8→16（roll 2s 103.1°）
+- M2S 两侧外框加方形灰色塑料提手（竖直方框 ×2）
+- 根因：store 默认 maxSpeedKnots=4.5 应用所有机型 → 新增 hardMaxSpeedKnots（M2S=3）：滑块调 4.5 也钳制 3.00 节；通用 ROV 不受限（4.52）

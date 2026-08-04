@@ -330,6 +330,36 @@ export class GeneratedROVModel {
       this.root.add(handle);
     }
 
+    // M2：两侧方形灰色塑料提手（机架左右外缘，竖直方框）
+    if (this.variant === 'm2') {
+      const { width } = this.cfg.dimensions;
+      const hx = width / 2;
+      const hw = 0.16; // 方框半宽
+      const hh = 0.12; // 方框半高
+      const barW = 0.028; // 提手条宽
+      const makeBar = (len: number, ax: 'x' | 'y') => {
+        const m = new THREE.Mesh(new THREE.BoxGeometry(ax === 'x' ? len : barW, ax === 'y' ? len : barW, barW), this.matFrame);
+        return m;
+      };
+      for (const side of [1, -1]) {
+        const grip = new THREE.Group();
+        const ex = side * (hx + 0.01);
+        // 上/下横条
+        const top = makeBar(hw * 2, 'x');
+        top.position.set(ex, hh, 0);
+        const bot = top.clone();
+        bot.position.y = -hh;
+        // 前/后竖条
+        const ver = makeBar(hh * 2, 'y');
+        ver.position.set(ex - hw, 0, 0);
+        const ver2 = ver.clone();
+        ver2.position.x = ex + hw;
+        grip.add(top, bot, ver, ver2);
+        grip.position.set(0, hy * 0.55, 0);
+        this.root.add(grip);
+      }
+    }
+
     // DVL 多普勒探头（机头下方，前视）
     const dvl = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.045, 0.08, 24), this.matFrame);
     dvl.position.set(0, -height * 0.3, -length * 0.42);
