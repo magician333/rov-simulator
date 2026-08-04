@@ -120,7 +120,8 @@ export class GeneratedROVModel {
   private buildBuoyancy(): void {
     const { length, width } = this.cfg.dimensions;
     const blockH = this.variant === 'm2' ? 0.1 : 0.09;
-    const blocks = this.variant === 'm2' ? 1 : 2;
+    // M2：取消顶部黄色浮力块（机身顶部保持简洁）
+    const blocks = this.variant === 'm2' ? 0 : 2;
     for (let i = 0; i < blocks; i++) {
       const x = this.variant === 'm2' ? 0 : (i === 0 ? width * 0.25 : -width * 0.25);
       const block = new THREE.Mesh(
@@ -318,10 +319,12 @@ export class GeneratedROVModel {
     const { length, height } = this.cfg.dimensions;
     const hy = height / 2;
 
-    // 天线（顶部，无发光球）
-    const ant = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, 0.38, 24), this.matFrame);
-    ant.position.set(0, hy + 0.18, 0.08);
-    this.root.add(ant);
+    // 天线（顶部，无发光球；M2 取消）
+    if (this.variant !== 'm2') {
+      const ant = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, 0.38, 24), this.matFrame);
+      ant.position.set(0, hy + 0.18, 0.08);
+      this.root.add(ant);
+    }
 
     // 提手环（顶部两端，标准机型）
     if (this.variant !== 'm2') {
@@ -339,7 +342,7 @@ export class GeneratedROVModel {
       const handleMat = this.matFrame;
       for (const sx of [hx, -hx]) {
         for (const sy of [hy - 0.02, -hy + 0.02]) {
-          const grip = new THREE.Mesh(new THREE.BoxGeometry(0.055, 0.055, 0.2), handleMat);
+          const grip = new THREE.Mesh(new THREE.BoxGeometry(0.055, 0.055, 0.34), handleMat);
           grip.position.set(sx, sy, 0);
           this.root.add(grip);
         }

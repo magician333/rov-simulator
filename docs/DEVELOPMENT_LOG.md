@@ -170,3 +170,9 @@ Chronological record of the project, milestones and key decisions. Useful for on
 
 - 32× torque alone made the semi-implicit Euler diverge (roll read 0). Added a global angular-velocity clamp (MAX_ANGULAR_SPEED = 2.2 rad/s) after integration.
 - M2S 32× roll 2 s now ≈ 182° (vs 103° at 16×) and numerically stable (no NaN over 5 s); generic ROV unaffected (its normal rates are far below the cap).
+
+## M22 — M2S handle lengthened, top buoyancy block & antenna removed
+
+- M2S side handles lengthened (0.20 → 0.34 along the frame rails).
+- M2S top yellow buoyancy block removed (visual only; physics unchanged).
+- M2S top antenna removed (slim line gone).
