@@ -159,3 +159,9 @@ Chronological record of the project, milestones and key decisions. Useful for on
 - M2S pitch/roll torque scale 8× → 16× (roll 2 s ≈ 103°, near agile limit).
 - M2S adds square light-gray plastic carry handles on both sides of the frame (Box-bars vertical loops).
 - Hard per-vehicle speed cap: `hardMaxSpeedKnots` — M2S clamps to 3 kn even if the UI speed slider is 4.5 (verified: slider 4.5 → actual 3.00 kn; generic ROV unaffected, 4.52 kn).
+
+## M21 — M2S 32× agility, nested square handles, thinner frame
+
+- M2S pitch/roll torque scale 16× → 32× (roll 2 s ≈ 108°, maxed by damping).
+- M2S: removed top torus carry rings; replaced stand-alone side frames with **square plastic handles nested on the side upper/lower frame tubes** (4 blocks, slightly thicker than the tube, at ±X/±Y frame rails).
+- M2S frame tubes slimmed r 0.038 → 0.02 (thin plastic skeleton).

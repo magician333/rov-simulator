@@ -83,8 +83,8 @@ export class GeneratedROVModel {
     const hx = width / 2;
     const hy = height / 2;
     const hz = length / 2;
-    // M2 变体外框加粗（塑料管件更粗壮）
-    const r = this.variant === 'm2' ? 0.038 : 0.022;
+    // M2 变体外框更细（细管塑料骨架）
+    const r = this.variant === 'm2' ? 0.02 : 0.022;
     const seg = 10;
     const makeTube = (len: number, ax: 'x' | 'y' | 'z') => {
       const geo = new THREE.CylinderGeometry(r, r, len, seg);
@@ -323,40 +323,26 @@ export class GeneratedROVModel {
     ant.position.set(0, hy + 0.18, 0.08);
     this.root.add(ant);
 
-    // 提手环（顶部两端）
-    for (const sz of [length * 0.3, -length * 0.3]) {
-      const handle = new THREE.Mesh(new THREE.TorusGeometry(0.09, 0.02, 16, 24), this.matFrame);
-      handle.position.set(0, hy + 0.06, sz);
-      this.root.add(handle);
+    // 提手环（顶部两端，标准机型）
+    if (this.variant !== 'm2') {
+      for (const sz of [length * 0.3, -length * 0.3]) {
+        const handle = new THREE.Mesh(new THREE.TorusGeometry(0.09, 0.02, 16, 24), this.matFrame);
+        handle.position.set(0, hy + 0.06, sz);
+        this.root.add(handle);
+      }
     }
 
-    // M2：两侧方形灰色塑料提手（机架左右外缘，竖直方框）
+    // M2：方形塑料把手嵌套在侧边上下外框管上（比管径稍大，每侧上下各一）
     if (this.variant === 'm2') {
       const { width } = this.cfg.dimensions;
       const hx = width / 2;
-      const hw = 0.16; // 方框半宽
-      const hh = 0.12; // 方框半高
-      const barW = 0.028; // 提手条宽
-      const makeBar = (len: number, ax: 'x' | 'y') => {
-        const m = new THREE.Mesh(new THREE.BoxGeometry(ax === 'x' ? len : barW, ax === 'y' ? len : barW, barW), this.matFrame);
-        return m;
-      };
-      for (const side of [1, -1]) {
-        const grip = new THREE.Group();
-        const ex = side * (hx + 0.01);
-        // 上/下横条
-        const top = makeBar(hw * 2, 'x');
-        top.position.set(ex, hh, 0);
-        const bot = top.clone();
-        bot.position.y = -hh;
-        // 前/后竖条
-        const ver = makeBar(hh * 2, 'y');
-        ver.position.set(ex - hw, 0, 0);
-        const ver2 = ver.clone();
-        ver2.position.x = ex + hw;
-        grip.add(top, bot, ver, ver2);
-        grip.position.set(0, hy * 0.55, 0);
-        this.root.add(grip);
+      const handleMat = this.matFrame;
+      for (const sx of [hx, -hx]) {
+        for (const sy of [hy - 0.02, -hy + 0.02]) {
+          const grip = new THREE.Mesh(new THREE.BoxGeometry(0.055, 0.055, 0.2), handleMat);
+          grip.position.set(sx, sy, 0);
+          this.root.add(grip);
+        }
       }
     }
 

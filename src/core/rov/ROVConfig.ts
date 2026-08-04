@@ -182,7 +182,7 @@ export const CHASING_M2_CONFIG: ROVConfig = {
   // 机型硬限速：无论滑块调到多少，M2S 最大航速恒为 3 节
   hardMaxSpeedKnots: 3,
   // 俯仰/横滚灵活性（转动响应 ×16）
-  torqueScale: { yaw: 1, pitch: 16, roll: 16 },
+  torqueScale: { yaw: 1, pitch: 32, roll: 32 },
   maxSwaySpeedKnots: 1.5,
   maxHeaveSpeedKnots: 1.5,
   massKg: 30,
