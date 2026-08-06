@@ -57,6 +57,10 @@ export class PhysicsWorld {
   /** 推进器推力滤波（一阶惯性响应） */
   private readonly thrustFilt: number[];
   private readonly thrusterTau = 0.12;
+  /** 体轴相对水流速度（斜流耦合 / Munk 力矩复用） */
+  private readonly vRelTmp = new THREE.Vector3();
+  /** 附加质量（kg，Munk 力矩用） */
+  private readonly addedMassKg = new THREE.Vector3();
 
   /** ROV 碰撞半径（m） */
   private readonly rovRadius: number;
@@ -81,6 +85,7 @@ export class PhysicsWorld {
       config.massKg * (1 + am[1]),
       config.massKg * (1 + am[2]),
     );
+    this.addedMassKg.set(config.massKg * am[0], config.massKg * am[1], config.massKg * am[2]);
     // 解锁后悬停：抵消净浮力（ρgV - mg，正 = 上浮）
     this.hoverCompY = -(SEAWATER_DENSITY * config.displacementM3 * GRAVITY - config.massKg * GRAVITY);
   }
@@ -192,7 +197,18 @@ export class PhysicsWorld {
     }
     this.lastNorm = alloc.norm;
 
-    // 2.5) 推进器一阶响应（真实推进器有启动/响应延迟）
+    // 2.5) 推进器斜流耦合：横向相对流使推进器效率下降（真实 ROV 横移/下潜时推进力减弱）
+    this.body.relativeVelocityBody(this.currentWorld, this.vRelTmp);
+    const vLatH = Math.hypot(this.vRelTmp.x, this.vRelTmp.z);
+    const vVert = Math.abs(this.vRelTmp.y);
+    const cfgT = this.body.config.thrusters;
+    for (let i = 0; i < alloc.thrust.length; i++) {
+      // 垂直推进器受水平流影响，水平推进器受垂直流影响（简化交叉耦合）
+      const vT = Math.abs(cfgT[i].direction[1]) > 0.5 ? vLatH : vVert;
+      alloc.thrust[i] *= 1 / (1 + 0.4 * Math.min(1, (vT * vT) / 4));
+    }
+
+    // 2.6) 推进器一阶响应（真实推进器有启动/响应延迟）
     const fk = Math.min(1, dt / this.thrusterTau);
     for (let i = 0; i < this.thrustFilt.length; i++) {
       this.thrustFilt[i] += (alloc.thrust[i] - this.thrustFilt[i]) * fk;
@@ -226,6 +242,10 @@ export class PhysicsWorld {
 
     // 湍流偏航扰动：水流涡流使 ROV 轻微偏转（真实湍流对姿态的干扰）
     this.applyTurbulenceTorque(dt);
+
+    // Munk 力矩（附加质量科氏项）：体轴相对流的 u·w 乘积 → 偏航不稳定力矩
+    this.body.relativeVelocityBody(this.currentWorld, this.vRelTmp);
+    this.tauBody.y += (this.addedMassKg.x - this.addedMassKg.z) * this.vRelTmp.x * this.vRelTmp.z * 0.5;
 
     // 转动：α = I⁻¹(τ - ω×Iω)；角速度钳制防发散（大力矩机型数值稳定）
     const alpha = this.body.angularAcceleration(this.tauBody);

@@ -216,3 +216,10 @@ Added 5 physical/aquatic improvements (all tunable, no regressions):
 - **Sea-state shallow swell**: turbulence boosted in the top 8 m when seaState > 0 (wave action near surface).
 
 Verified: M2S full throttle 3.00 kn, roll 2 s hits 75° limit, hover holds 10.00 m, dive 4.54 kn in open water (slows near floor), thruster response ramps smoothly (2.65 kn at 0.5 s).
+
+## M25 — Fluid deep-dive: wave orbit, thruster cross-flow coupling, Munk moment
+
+- **Wave orbital flow** (Airy approximation): sea-state driven wave height/period, horizontal + vertical orbital velocities exponentially decay with depth; near-surface ROV rides/sways with the swell.
+- **Thruster cross-flow coupling**: transverse relative flow reduces thruster efficiency (vertical thrusters affected by horizontal flow, horizontal by vertical) — real loss when strafing/diving.
+- **Munk moment** (added-mass Coriolis term): yaw instability torque from body-axis u·w product with asymmetric added mass — negligible at low speed, adds realism in currents/lateral motion.
+- Verified: seaState=3 shallow +0.3 m/s wave flow, 25 m deep fades to base current; cross-flow coupling active; no smoke regressions.

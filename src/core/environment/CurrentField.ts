@@ -8,7 +8,7 @@
 import * as THREE from 'three';
 import type { EnvironmentState } from '../environment/EnvironmentState';
 import { fbm3 } from '../../utils/noise';
-import { deg2rad } from '../../utils/units';
+import { deg2rad, GRAVITY } from '../../utils/units';
 
 /** 局部水流增强区（场景注册：桥墩涡流、坝前急流等） */
 export interface LocalFlowZone {
@@ -55,6 +55,32 @@ export class CurrentField {
   }
 
   /**
+   * 波浪轨道流（Airy 波近似）：海况等级驱动的行进波，水面附近速度最大、随深度指数衰减。
+   * 水平轨道速度在波峰前向、垂向在波峰上下振荡 —— ROV 贴近水面时随涌浪起伏/漂移。
+   */
+  private addWaveOrbit(pos: THREE.Vector3, time: number, out: THREE.Vector3): void {
+    const e = this.env.get();
+    if (e.seaState < 0.5) return;
+    // 由海况派生波高与周期（0 级=0，4 级≈2.5m / T≈8s）
+    const H = 0.25 + e.seaState * 0.55;
+    const T = 5.5 + e.seaState * 0.7;
+    const omega = (Math.PI * 2) / T;
+    const k = (omega * omega) / GRAVITY; // 深水色散
+    const depth = Math.max(0, -pos.y);
+    const atten = Math.exp(-k * depth); // 指数衰减
+    if (atten < 0.05) return;
+    // 波向：沿基准流向（无流时取 +Z）
+    const dirRad = deg2rad(e.currentDirectionDeg);
+    const kx = Math.sin(dirRad) * k;
+    const kz = Math.cos(dirRad) * k;
+    const phase = kx * pos.x + kz * pos.z - omega * time;
+    const amp = (H / 2) * omega * atten;
+    out.x += Math.cos(phase) * amp * Math.sin(dirRad);
+    out.z += Math.cos(phase) * amp * Math.cos(dirRad);
+    out.y += Math.sin(phase) * amp * 0.6; // 垂向轨道分量（略小于水平）
+  }
+
+  /**
    * 世界系完整水流速度（基准流 × 深度衰减 + 湍流扰动）
    * @param pos 世界系位置
    * @param time 累计时间（秒）
@@ -80,6 +106,9 @@ export class CurrentField {
       out.x += Math.sin(rad) * z.strength * falloff;
       out.z += Math.cos(rad) * z.strength * falloff;
     }
+
+    // 波浪轨道流（Airy 波近似）：海况 >0 时叠加周期性轨道速度，深度指数衰减
+    this.addWaveOrbit(pos, time, out);
 
     if (e.turbulence > 0.001) {
       // 湍流扰动：低频噪声叠加在基流上（水平面为主，垂直弱）
