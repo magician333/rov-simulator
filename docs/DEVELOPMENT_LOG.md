@@ -246,3 +246,9 @@ Verified: M2S full throttle 3.00 kn, roll 2 s hits 75° limit, hover holds 10.00
 
 - **Solid-color overlay**: VisibilityBlur now mixes a murky color over the whole 3D frame as visibility → 0.2 m (opacity up to ~0.9) or turbidity → high — distant outlines can no longer be seen through the blur.
 - **Continuous hover blend**: hover compensation no longer toggles on/off by an idle threshold; it blends out smoothly as input magnitude grows (full hold at 0 input, zero at ≥0.2). Light dive inputs now always descend instead of being pulled back by hover. Verified: hover holds 3.00 m, light dive (0.05) descends slowly, full dive descends fast; all-scene dive probes reach >10 m.
+
+## M30 — Distance-aware visibility + hover earlier release
+
+- **Distance-aware blur/overlay**: VisibilityBlur rewritten as a single depth-aware pass — each pixel's camera distance (from the render-target depth texture) drives blur strength and murky-overlay opacity. Near objects (< ~0.4× visibility) stay sharp; distant ones blur then fade into the murk color. This matches real water (see clearly near, nothing far).
+- **Hover release earlier**: hover blend releases at input ≥ 0.33 (was 0.2) so light dive inputs break free sooner.
+- Note: all-scene dive physics verified clean (seafloor 10-14 m); the "1.7 m stuck" perception is hover pull on light inputs — now released earlier.

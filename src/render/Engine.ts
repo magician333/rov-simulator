@@ -342,7 +342,7 @@ export class Engine {
         }
         // 纯色遮罩：能见度越低遮罩越实（彻底遮挡远处轮廓），浊度也叠加
         const overlay = Math.min(1, visBlur * 0.9 + Math.max(0, envNow.turbidity - 0.4) * 1.4);
-        this.visibilityBlur.setBlur(blurAmt, overlay);
+        this.visibilityBlur.setBlur(blurAmt, overlay, envNow.visibility);
         this.visibilityBlur.render();
       } else {
         this.renderer.render(this.scene, this.camera);

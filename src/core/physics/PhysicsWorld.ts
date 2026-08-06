@@ -228,7 +228,7 @@ export class PhysicsWorld {
         Math.abs(i.surge), Math.abs(i.sway), Math.abs(i.heave),
         Math.abs(i.yaw), Math.abs(i.pitch), Math.abs(i.roll),
       );
-      const hold = 1 - Math.min(1, inMag * 5); // 输入 0 → 完全保持；输入 ≥0.2 → 无保持
+      const hold = 1 - Math.min(1, inMag * 3); // 输入 0 → 完全保持；输入 ≥0.33 → 无保持（更早让输入接管）
       if (hold > 0) {
         this.fWorld.y += this.hoverCompY * hold;
         this.body.velocityWorld.x *= 0.985;
