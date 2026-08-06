@@ -230,3 +230,8 @@ Verified: M2S full throttle 3.00 kn, roll 2 s hits 75° limit, hover holds 10.00
 - **Dive-depth fix (1.7 m)**: root cause was hover-idle detection using a 0.001 threshold — light dive inputs were treated as idle, hover kept cancelling the dive; waves near the surface compounded it. Raised idle threshold to 0.01, weakened wave vertical orbit (0.6→0.3) and thruster cross-flow coupling (0.4→0.25). Verified: seaState=4 + light heave dives past 1.7 m smoothly.
 - **DME sonar realtime**: independent 30 Hz sampling loop (was sampled inside the 10 Hz HUD timer); HUD reads the latest readings — edge distances update near-instantly.
 - **Bottom sediment**: ROV within 2.5 m of the seabed kicks up sediment (Engine computes 1 − d/2.5), which raises fog density (+0.22) and adds up to 600 more particles with larger size — touching the bottom darkens the water realistically.
+
+## M27 — Pipeline interior spawn fix + true 0.2 m visibility
+
+- **Dive blocked at ~1.7 m — real root cause**: the pipeline-interior scene spawned the ROV above the pipe (y=-1.2) while the pipe-top collider sealed the entrance, so the vehicle could never enter the pipe (blocked ~2.2 m depth). Spawn moved inside the pipe (y=PIPE_Y=-5); verified dive now reaches the pipe bottom (~5.6 m) like the other 7 scenes.
+- **Visibility**: `fogDensity` clamped visibility to ≥1 m (`Math.max(1, …)`), so 0.2 m setting did nothing and distant outlines remained. Now supports 0.2 m and uses a tighter standard (≈16% remaining at the visibility distance) — low visibility becomes truly opaque.

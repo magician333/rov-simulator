@@ -163,8 +163,9 @@ export class UnderwaterEffects {
    * 浊度 0 → 视距 ~35m；0.5 → ~19m；1.0 → ~8m（逐渐无法看清，但仍可作业）
    */
   private fogDensity(env: Readonly<EnvironmentParams>): number {
-    const v = Math.max(1, env.visibility);
-    const effV = Math.max(0.5, v * (1 - env.turbidity * 0.7));
-    return (1 / (effV * 1.4)) * (1 + env.turbidity * 0.35);
+    // 支持最低 0.2m 能见度：密度标准 = 在"能见度距离"处衰减到约 16%（低能见度时几乎看不见远处轮廓）
+    const v = Math.max(0.2, env.visibility);
+    const effV = Math.max(0.15, v * (1 - env.turbidity * 0.7));
+    return (1 / (effV * 0.55)) * (1 + env.turbidity * 0.35);
   }
 }

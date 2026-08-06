@@ -19,7 +19,8 @@ class PipelineIntSceneImpl implements SceneDefinition {
   readonly name = '管道内巡检';
   readonly description = '大口径管道，进入管内检查内壁焊缝';
   readonly environmentDefaults = { envModel: 'river' as const, riverKnots: 1, currentDirectionDeg: 0, turbulence: 0.08, visibility: 18, turbidity: 0.2 };
-  readonly spawn = { position: [0, -1.2, 18] as [number, number, number], yawDeg: 180 };
+  // 出生点在管道内中心：避免被管道顶壳 collider 挡住"无法下潜"（管内可上/下到内壁作业）
+  readonly spawn = { position: [0, PIPE_Y, 18] as [number, number, number], yawDeg: 180 };
   readonly colliders = [
     // 管道壁：上下左右四面长板近似圆筒
     { type: 'box' as const, position: new THREE.Vector3(0, PIPE_Y + PIPE_R + 0.2, 0), halfExtents: new THREE.Vector3(PIPE_R + 0.8, 0.2, PIPE_LEN / 2) },
