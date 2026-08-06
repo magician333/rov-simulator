@@ -19,8 +19,8 @@ class BridgeSceneImpl implements SceneDefinition {
     { type: 'box' as const, position: new THREE.Vector3(-15, 1.5, -10), halfExtents: new THREE.Vector3(3.2, 13.5, 3.5) },
     { type: 'box' as const, position: new THREE.Vector3(0, 1.5, -10), halfExtents: new THREE.Vector3(3.2, 13.5, 3.5) },
     { type: 'box' as const, position: new THREE.Vector3(15, 1.5, -10), halfExtents: new THREE.Vector3(3.2, 13.5, 3.5) },
-    // 桥底甲板（两墩之间防穿模）
-    { type: 'box' as const, position: new THREE.Vector3(0, 8.5, -10), halfExtents: new THREE.Vector3(26, 1.6, 2.5) },
+    // 桥底甲板（两墩之间防穿模；y 对齐视觉 deck capBedY+16.5）
+    { type: 'box' as const, position: new THREE.Vector3(0, seabedHeight(0, -10) + 16.5, -10), halfExtents: new THREE.Vector3(26, 0.8, 2.5) },
   ];
   readonly localFlowZones = [
     // 中墩两侧涡流（左旋/右旋）

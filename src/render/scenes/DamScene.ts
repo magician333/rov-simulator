@@ -17,7 +17,7 @@ class DamSceneImpl implements SceneDefinition {
   readonly spawn = { position: [0, -1.2, 28] as [number, number, number], yawDeg: 0 };
   readonly colliders = [
     { type: 'box' as const, position: new THREE.Vector3(0, 3, -15), halfExtents: new THREE.Vector3(55, 18, 2.6) }, // 坝体
-    { type: 'box' as const, position: new THREE.Vector3(30, -5, -12), halfExtents: new THREE.Vector3(4, 5, 1) }, // 闸门
+    { type: 'box' as const, position: new THREE.Vector3(30, -8, -12.4), halfExtents: new THREE.Vector3(1.8, 3.1, 0.6) }, // 闸门（对齐视觉 gate 3.4×6×0.5）
   ];
   readonly localFlowZones = [
     {

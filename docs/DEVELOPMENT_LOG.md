@@ -285,3 +285,11 @@ Verified: M2S full throttle 3.00 kn, roll 2 s hits 75° limit, hover holds 10.00
 - Collision restitution 0.15 → 0.03: with the added fluid physics (thruster lag, added mass, cross-flow) the rebound could not be pushed back, so the ROV hovered away from hulls/seabed/boxes. Nearly-zero bounce lets it sit against surfaces (gap = collision radius).
 - Near-bottom damping softened: range 3 m → 1.5 m, vertical factor ×2.2 → ×1.6 max (still viscous near the floor but not blocking approach).
 - Verified: ROV rests at 0.88 m (its radius) from seabed and from a box face; dive & smoke clean.
+
+## M35 — "Blocked metres before solids" fixed (oversized colliders)
+
+Several colliders were several metres larger than their visuals, so the ROV stopped well before touching them:
+- **Dam gate**: collider half(4,5,1) @y=-5 vs visual gate (3.4×6×0.5 @y=-8) → now half(1.8,3.1,0.6) @y=-8 (was blocking ~2-3 m out).
+- **Bridge deck**: collider y=8.5 vs visual deck capBedY+16.5 (~4.5-6.5) → now aligned (was blocking 2-4 m above the deck).
+- **Salvage crates**: 4 sphere colliders r=2.6 (larger than the 2.4×2×6 crates in width) → box colliders half(1.3,1.1,3.1) with rotationY matching visuals.
+- Combined with the earlier restitution 0.03, the ROV now approaches hulls, seabed and boxes right up to its collision radius.
