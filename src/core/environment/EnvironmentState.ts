@@ -60,7 +60,7 @@ export const ENV_RANGES: Record<keyof EnvironmentParams, { min: number; max: num
   currentSpeed: { min: 0, max: 3, step: 0.05 },
   currentDirectionDeg: { min: 0, max: 360, step: 1 },
   turbulence: { min: 0, max: 1, step: 0.01 },
-  visibility: { min: 1, max: 60, step: 0.5 },
+  visibility: { min: 0.2, max: 60, step: 0.1 },
   temperatureC: { min: -2, max: 30, step: 0.5 },
   turbidity: { min: 0, max: 1, step: 0.01 },
   sunlight: { min: 0, max: 1, step: 0.01 },

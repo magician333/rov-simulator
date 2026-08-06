@@ -28,6 +28,8 @@ export class UnderwaterEffects {
   private fog: THREE.FogExp2;
   private flickerPhase = 0;
   private quality: QualityLevel;
+  /** 底部淤泥浑浊度 0..1（ROV 触底/近底时由 Engine 更新） */
+  private sediment = 0;
 
   // 悬浮物粒子
   private particlePoints: THREE.Points;
@@ -81,7 +83,8 @@ export class UnderwaterEffects {
 
   /** 每帧根据环境参数同步视觉（雾/光/粒子） */
   update(env: Readonly<EnvironmentParams>, dt: number, time: number): void {
-    this.fog.density = this.fogDensity(env);
+    // 触底淤泥：近底翻起的沉积物使视野浑浊（叠加在雾上）
+    this.fog.density = this.fogDensity(env) + this.sediment * 0.22;
 
     this.flickerPhase += dt;
     const wave = 0.5 + 0.5 * Math.sin(this.flickerPhase * 1.9) * Math.sin(this.flickerPhase * 0.53);
@@ -98,8 +101,15 @@ export class UnderwaterEffects {
   private updateParticles(env: Readonly<EnvironmentParams>, dt: number, time: number): void {
     // 数量：浊度 0 → 250（基础悬浮物），浊度 1 → 1950；质量档位缩放
     const qualityScale = this.quality === 'high' ? 1 : this.quality === 'medium' ? 0.7 : 0.4;
-    const target = Math.min(PARTICLE_POOL, Math.round((250 + env.turbidity * 1700) * qualityScale));
+    // 低能见度（<5m）与触底淤泥时粒子大幅增多（充满悬浮物）
+    const visBoost = env.visibility < 5 ? (1 - env.visibility / 5) * 900 : 0;
+    const sedBoost = this.sediment * 600;
+    const target = Math.min(PARTICLE_POOL, Math.round((250 + env.turbidity * 1700 + visBoost + sedBoost) * qualityScale));
     this.particleGeo.setDrawRange(0, target);
+    // 粒子尺寸：低能见度/触底时放大（更密更实的悬浮感）
+    const mat = this.particlePoints.material as THREE.PointsMaterial;
+    const visSize = env.visibility < 5 ? (1 - env.visibility / 5) * 0.1 : 0;
+    mat.size = 0.11 + visSize + this.sediment * 0.06;
 
     // 水流漂移（世界系基准流 + 扰动）
     const speed = env.currentSpeed;
@@ -124,6 +134,11 @@ export class UnderwaterEffects {
       else if (pos[ix + 2] < -PARTICLE_Z) pos[ix + 2] = PARTICLE_Z;
     }
     this.particleGeo.attributes.position.needsUpdate = true;
+  }
+
+  /** 触底淤泥浑浊度（0=无，1=完全翻起）；驱动雾密度与近底粒子 */
+  setSediment(level: number): void {
+    this.sediment = Math.max(0, Math.min(1, level));
   }
 
   setQuality(q: QualityLevel): void {

@@ -108,8 +108,8 @@ export class PhysicsWorld {
   /** 是否无控制输入（解锁后悬停判定） */
   private isIdleInput(): boolean {
     const i = this.input;
-    return Math.abs(i.surge) < 0.001 && Math.abs(i.sway) < 0.001 && Math.abs(i.heave) < 0.001 &&
-      Math.abs(i.yaw) < 0.001 && Math.abs(i.pitch) < 0.001 && Math.abs(i.roll) < 0.001;
+    return Math.abs(i.surge) < 0.01 && Math.abs(i.sway) < 0.01 && Math.abs(i.heave) < 0.01 &&
+      Math.abs(i.yaw) < 0.01 && Math.abs(i.pitch) < 0.01 && Math.abs(i.roll) < 0.01;
   }
 
   get controllerRef(): ROVController {
@@ -205,7 +205,7 @@ export class PhysicsWorld {
     for (let i = 0; i < alloc.thrust.length; i++) {
       // 垂直推进器受水平流影响，水平推进器受垂直流影响（简化交叉耦合）
       const vT = Math.abs(cfgT[i].direction[1]) > 0.5 ? vLatH : vVert;
-      alloc.thrust[i] *= 1 / (1 + 0.4 * Math.min(1, (vT * vT) / 4));
+      alloc.thrust[i] *= 1 / (1 + 0.25 * Math.min(1, (vT * vT) / 4));
     }
 
     // 2.6) 推进器一阶响应（真实推进器有启动/响应延迟）

@@ -223,3 +223,10 @@ Verified: M2S full throttle 3.00 kn, roll 2 s hits 75° limit, hover holds 10.00
 - **Thruster cross-flow coupling**: transverse relative flow reduces thruster efficiency (vertical thrusters affected by horizontal flow, horizontal by vertical) — real loss when strafing/diving.
 - **Munk moment** (added-mass Coriolis term): yaw instability torque from body-axis u·w product with asymmetric added mass — negligible at low speed, adds realism in currents/lateral motion.
 - Verified: seaState=3 shallow +0.3 m/s wave flow, 25 m deep fades to base current; cross-flow coupling active; no smoke regressions.
+
+## M26 — Visibility, dive-depth fix, DME realtime, bottom sediment
+
+- **Visibility**: slider min 1 → 0.2 m; low visibility (<5 m) boosts particle count (+900 ramp) and enlarges particle size — dense suspended matter near the lens (fog already scales with 1/visibility).
+- **Dive-depth fix (1.7 m)**: root cause was hover-idle detection using a 0.001 threshold — light dive inputs were treated as idle, hover kept cancelling the dive; waves near the surface compounded it. Raised idle threshold to 0.01, weakened wave vertical orbit (0.6→0.3) and thruster cross-flow coupling (0.4→0.25). Verified: seaState=4 + light heave dives past 1.7 m smoothly.
+- **DME sonar realtime**: independent 30 Hz sampling loop (was sampled inside the 10 Hz HUD timer); HUD reads the latest readings — edge distances update near-instantly.
+- **Bottom sediment**: ROV within 2.5 m of the seabed kicks up sediment (Engine computes 1 − d/2.5), which raises fog density (+0.22) and adds up to 600 more particles with larger size — touching the bottom darkens the water realistically.

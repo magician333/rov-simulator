@@ -210,8 +210,8 @@ export class SimulationEngine {
   /** 当前是否无控制输入 */
   private isIdleInputNow(): boolean {
     const i = this.physics.input;
-    return Math.abs(i.surge) < 0.001 && Math.abs(i.sway) < 0.001 && Math.abs(i.heave) < 0.001 &&
-      Math.abs(i.yaw) < 0.001 && Math.abs(i.pitch) < 0.001 && Math.abs(i.roll) < 0.001;
+    return Math.abs(i.surge) < 0.01 && Math.abs(i.sway) < 0.01 && Math.abs(i.heave) < 0.01 &&
+      Math.abs(i.yaw) < 0.01 && Math.abs(i.pitch) < 0.01 && Math.abs(i.roll) < 0.01;
   }
 
   /** 水流场采样（供渲染层展示水流方向等，可选） */

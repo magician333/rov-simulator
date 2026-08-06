@@ -303,6 +303,15 @@ export class Engine {
       this.rov.setThrusterAnimations(snap.thrusterCommands);
     }
 
+    // 触底淤泥：ROV 距海底 < 2.5m 时翻起沉积物（能见度大幅降低）
+    if (snap) {
+      const sea = seabedHeight(snap.position.x, snap.position.z);
+      const dist = snap.position.y - sea;
+      this.effects.setSediment(dist < 2.5 ? 1 - dist / 2.5 : 0);
+    } else {
+      this.effects.setSediment(0);
+    }
+
     // 水下环境同步 + 场景每帧动画
     this.simTime += dt;
     this.effects.update(this.simulation?.environment.get() ?? {

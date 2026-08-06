@@ -104,6 +104,7 @@ export function TrainingScreen() {
   const speedCountRef = useRef(0);
   // 定距声纳
   const distSonarRef = useRef<DistanceSonar | null>(null);
+  const distReadingsRef = useRef<DistanceReadings | undefined>(undefined);
   // 机械臂夹取：{ 被抓物体, 机械臂末端体坐标偏移 }
   const grabbedRef = useRef<{ obj: THREE.Object3D; offsetBody: THREE.Vector3 } | null>(null);
   const [grabbedName, setGrabbedName] = useState<string | null>(null);
@@ -177,16 +178,21 @@ export function TrainingScreen() {
     setTaskState(taskRunnerRef.current.getView());
     setTaskResult(null);
 
-    // HUD + 任务循环（10Hz）；定距声纳同步采样（持续显示不闪烁）
-    const hudTimer = window.setInterval(() => {
-      let distanceSonar: DistanceReadings | undefined;
-      if (distSonarRef.current) {
-        const snap = sim.getRenderSnapshot();
+    // 定距声纳独立采样（30Hz，更实时；HUD 读取最新值）
+    const distTimer = window.setInterval(() => {
+      const d = distSonarRef.current;
+      const s2 = simRef.current;
+      if (d && s2) {
+        const snap = s2.getRenderSnapshot();
         TMP_VEC.set(snap.position.x, snap.position.y, snap.position.z);
         TMP_QUAT.set(snap.quaternion.x, snap.quaternion.y, snap.quaternion.z, snap.quaternion.w);
-        distanceSonar = distSonarRef.current.sample(TMP_VEC, TMP_QUAT);
+        distReadingsRef.current = d.sample(TMP_VEC, TMP_QUAT);
       }
-      setHud({ ...sim.getHudSnapshot(), distanceSonar });
+    }, 33);
+
+    // HUD + 任务循环（10Hz）；定距声纳使用最新读数
+    const hudTimer = window.setInterval(() => {
+      setHud({ ...sim.getHudSnapshot(), distanceSonar: distReadingsRef.current });
 
       // 任务推进
       if (taskRunnerRef.current.currentPhase === 'active') {
@@ -421,6 +427,7 @@ export function TrainingScreen() {
 
     return () => {
       window.clearInterval(hudTimer);
+      window.clearInterval(distTimer);
       window.clearInterval(grabTimer);
       window.clearInterval(padTimer);
       window.clearInterval(sessionTimer);
@@ -430,6 +437,7 @@ export function TrainingScreen() {
       simRef.current = null;
       engineRef.current = null;
       distSonarRef.current = null;
+      distReadingsRef.current = undefined;
       setHud(null);
       setTaskState(null);
       if (unlockMsgTimerRef.current) window.clearTimeout(unlockMsgTimerRef.current);

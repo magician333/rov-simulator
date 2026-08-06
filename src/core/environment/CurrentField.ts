@@ -77,7 +77,7 @@ export class CurrentField {
     const amp = (H / 2) * omega * atten;
     out.x += Math.cos(phase) * amp * Math.sin(dirRad);
     out.z += Math.cos(phase) * amp * Math.cos(dirRad);
-    out.y += Math.sin(phase) * amp * 0.6; // 垂向轨道分量（略小于水平）
+    out.y += Math.sin(phase) * amp * 0.3; // 垂向轨道分量（削弱：避免浅水下潜被波浪顶住）
   }
 
   /**
