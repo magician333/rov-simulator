@@ -20,6 +20,7 @@ import { getScene, type SceneDefinition, disposeObject } from './scenes/BaseScen
 import { fbm3 } from '../utils/noise';
 import { seabedHeight } from '../core/terrain';
 import { getTexture } from './textures';
+import { VisibilityBlur } from './post/VisibilityBlur';
 import { useAppStore } from '../state/store';
 
 /** 当前视角模式（Engine 循环读，避免类内依赖 store 渲染流程） */
@@ -280,6 +281,7 @@ export class Engine {
     this.camera.aspect = w / h;
     this.camera.updateProjectionMatrix();
     this.renderer.setSize(w, h);
+    this.visibilityBlur?.setSize(w, h);
   }
 
   private loop(): void {
@@ -328,7 +330,24 @@ export class Engine {
 
     this.updateWater(dt);
 
-    this.renderer.render(this.scene, this.camera);
+    // 低能见度/高浊度 → 高斯模糊后处理（平时直接渲染零开销）
+    const envNow = this.simulation?.environment.get();
+    if (envNow) {
+      const visBlur = envNow.visibility < 5 ? (1 - envNow.visibility / 5) : 0;
+      const turbBlur = Math.max(0, envNow.turbidity - 0.3) * 1.2;
+      const blurAmt = Math.min(1, visBlur * 1.05 + turbBlur);
+      if (blurAmt > 0.002) {
+        if (!this.visibilityBlur) {
+          this.visibilityBlur = new VisibilityBlur(this.renderer, this.scene, this.camera);
+        }
+        this.visibilityBlur.setBlur(blurAmt);
+        this.visibilityBlur.render();
+      } else {
+        this.renderer.render(this.scene, this.camera);
+      }
+    } else {
+      this.renderer.render(this.scene, this.camera);
+    }
   }
 
   private quality: QualityLevel = 'medium';
@@ -366,6 +385,8 @@ export class Engine {
 
   /** 涟漪：顶点正弦波动画（低频涌 + 高频细波） */
   private waterTick = 0;
+  /** 低能见度高斯模糊后处理（懒创建） */
+  private visibilityBlur: VisibilityBlur | null = null;
 
   private updateWater(dt: number): void {
     if (this.quality === 'low') return; // 低画质关闭涟漪
@@ -508,6 +529,8 @@ export class Engine {
     cancelAnimationFrame(this.rafId);
     window.removeEventListener('resize', this.onResize);
     this.sceneManager.dispose();
+    this.visibilityBlur?.dispose();
+    this.visibilityBlur = null;
     this.scene.environment?.dispose();
     this.scene.traverse((obj) => {
       const mesh = obj as THREE.Mesh;

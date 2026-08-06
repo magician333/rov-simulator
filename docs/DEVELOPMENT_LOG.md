@@ -235,3 +235,9 @@ Verified: M2S full throttle 3.00 kn, roll 2 s hits 75° limit, hover holds 10.00
 
 - **Dive blocked at ~1.7 m — real root cause**: the pipeline-interior scene spawned the ROV above the pipe (y=-1.2) while the pipe-top collider sealed the entrance, so the vehicle could never enter the pipe (blocked ~2.2 m depth). Spawn moved inside the pipe (y=PIPE_Y=-5); verified dive now reaches the pipe bottom (~5.6 m) like the other 7 scenes.
 - **Visibility**: `fogDensity` clamped visibility to ≥1 m (`Math.max(1, …)`), so 0.2 m setting did nothing and distant outlines remained. Now supports 0.2 m and uses a tighter standard (≈16% remaining at the visibility distance) — low visibility becomes truly opaque.
+
+## M28 — Gaussian blur for low visibility/turbidity, wave vertical reduced
+
+- **Gaussian blur post-processing**: new `VisibilityBlur` (EffectComposer + Horizontal/VerticalBlurShader). Blur ramps when visibility < 5 m (0.2 m → ~max blur) and when turbidity > 0.3. Composer is lazy-created and only renders when blur > 0 (zero overhead otherwise); resize & dispose wired.
+- Wave vertical orbital component further reduced (0.3 → 0.15) for stable shallow-water diving.
+- Verified all 8 scenes dive fine from real spawns (the only prior blocker was pipeline_int, already fixed); probe grid confirms no other scene blocks below 2.5 m.
