@@ -86,7 +86,12 @@ export class CurrentField {
       const nx = fbm3(pos.x * CurrentField.TURB_FREQ, pos.z * CurrentField.TURB_FREQ, time * CurrentField.TURB_TIME_SCALE, 3);
       const nz = fbm3(pos.x * CurrentField.TURB_FREQ + 100, pos.z * CurrentField.TURB_FREQ, time * CurrentField.TURB_TIME_SCALE + 50, 3);
       const ny = fbm3(pos.x * CurrentField.TURB_FREQ + 200, pos.z * CurrentField.TURB_FREQ, time * CurrentField.TURB_TIME_SCALE + 100, 2) * 0.3;
-      const strength = e.turbulence * 0.6;
+      // 海况浅层涌浪：海况 >0 且深度 <8m 时湍流增强（近水面浪涌对 ROV 的扰动更真实）
+      const depth = -pos.y;
+      const seaBoost = e.seaState > 0 && depth < 8
+        ? 1 + 0.9 * (1 - depth / 8) * Math.min(1, e.seaState / 2)
+        : 1;
+      const strength = e.turbulence * 0.6 * seaBoost;
       out.x += nx * strength;
       out.y += ny * strength * 0.5;
       out.z += nz * strength;

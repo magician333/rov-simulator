@@ -205,3 +205,14 @@ Chronological record of the project, milestones and key decisions. Useful for on
 
 **Render fixes**
 - `UnderwaterEffects.setQuality` re-configures shadow camera (±60) & mapSize on low→high; `Engine.setQuality` rebuilds PMREM env map if missing; `Engine.quality` set in constructor; AttitudeIndicator nose cone direction fixed (now points -Z).
+
+## M24 — Fluid simulation enhancement (real-water feel)
+
+Added 5 physical/aquatic improvements (all tunable, no regressions):
+- **Added mass**: effective mass `m_eff = m×(1+am)` per axis (heave largest, standard 0.8 / M2S 0.55) and effective inertia `I_eff = I×(1+ang)` — dive acceleration and turn feel heavier like real displaced water.
+- **Thruster first-order response**: per-thruster low-pass τ=0.12 s — smooth start/stop instead of instant thrust.
+- **Ground effect**: within 3 m of the seabed damping increases (vertical ×2.2, horizontal ×1.5) — near-bottom operations feel viscous.
+- **Turbulence yaw torque**: vortex-induced yaw disturbance (scales with turbulence, fades with depth) plus light pitch/roll jitter.
+- **Sea-state shallow swell**: turbulence boosted in the top 8 m when seaState > 0 (wave action near surface).
+
+Verified: M2S full throttle 3.00 kn, roll 2 s hits 75° limit, hover holds 10.00 m, dive 4.54 kn in open water (slows near floor), thruster response ramps smoothly (2.65 kn at 0.5 s).

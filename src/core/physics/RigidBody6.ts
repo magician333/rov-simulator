@@ -15,8 +15,10 @@ export class RigidBody6 {
   readonly velocityWorld: THREE.Vector3 = new THREE.Vector3();
   readonly omegaBody: THREE.Vector3 = new THREE.Vector3();
 
-  /** 惯性张量（对角近似） */
+  /** 惯性张量（对角近似，不含附加质量） */
   readonly inertiaBody: THREE.Vector3;
+  /** 有效惯性张量（含附加质量：inertia × (1 + ang)） */
+  readonly effInertiaBody: THREE.Vector3;
 
   /** 临时向量池，避免每步分配 */
   private readonly _v1 = new THREE.Vector3();
@@ -33,6 +35,12 @@ export class RigidBody6 {
     const Iy = (m / 12) * (width * width + length * length);
     const Iz = (m / 12) * (width * width + height * height);
     this.inertiaBody = new THREE.Vector3(Ix, Iy, Iz);
+    const amAng = config.addedMass?.ang ?? [0, 0, 0];
+    this.effInertiaBody = new THREE.Vector3(
+      Ix * (1 + amAng[0]),
+      Iy * (1 + amAng[1]),
+      Iz * (1 + amAng[2]),
+    );
   }
 
   setPose(position: THREE.Vector3, quaternion: THREE.Quaternion): void {
@@ -52,13 +60,13 @@ export class RigidBody6 {
     return out.copy(bodyVec).applyQuaternion(this.quaternion);
   }
 
-  /** 计算绕体轴角加速度：α = I⁻¹ * (τ - ω × (I·ω))（低速可忽略科氏项） */
+  /** 计算绕体轴角加速度：α = I_eff⁻¹ * (τ - ω × (I·ω))（附加质量计入有效惯性） */
   angularAcceleration(tauBody: THREE.Vector3): THREE.Vector3 {
     // ω × (I·ω)
     const Iw = this._v1.copy(this.omegaBody).multiply(this.inertiaBody);
     this._v2.crossVectors(this.omegaBody, Iw);
     const effective = this._v1.copy(tauBody).sub(this._v2);
-    return effective.divide(this.inertiaBody);
+    return effective.divide(this.effInertiaBody);
   }
 
   /** 相对水流速度（体坐标系）：v_rel = v_body - v_current_body */

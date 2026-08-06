@@ -15,6 +15,7 @@ import { resolveCollisions, type ColliderShape } from './Collider';
 import { ROVController, EMPTY_INPUT, type ControlInput } from '../rov/ROVController';
 import { integrateLinear, integrateQuaternion, FIXED_DT } from './integrator';
 import { SEAWATER_DENSITY, GRAVITY } from '../../utils/units';
+import { fbm3 } from '../../utils/noise';
 
 export interface PhysicsStepResult {
   /** 各推进器归一化指令 -1..1（渲染动画） */
@@ -32,6 +33,8 @@ const MAX_ANGULAR_SPEED = 2.2;
 
 export class PhysicsWorld {
   readonly body: RigidBody6;
+  /** 环境参数（湍流偏航扰动读取） */
+  private readonly environment: EnvironmentState;
   /** 控制输入（由 SimulationEngine/UI 更新） */
   input: ControlInput = { ...EMPTY_INPUT };
 
@@ -49,6 +52,11 @@ export class PhysicsWorld {
   private readonly invQuat = new THREE.Quaternion();
   private readonly attitudeEuler = new THREE.Euler();
   private lastNorm: number[] = [];
+  /** 有效质量（含附加质量，按轴） */
+  private readonly effMass = new THREE.Vector3();
+  /** 推进器推力滤波（一阶惯性响应） */
+  private readonly thrustFilt: number[];
+  private readonly thrusterTau = 0.12;
 
   /** ROV 碰撞半径（m） */
   private readonly rovRadius: number;
@@ -56,14 +64,23 @@ export class PhysicsWorld {
   private colliders: ColliderShape[] = [];
 
   constructor(config: ROVConfig, env: EnvironmentState) {
+    this.environment = env;
     this.body = new RigidBody6(config);
     this.water = new WaterForces(config);
     this.allocator = new ThrusterAllocator(config);
     this.current = new CurrentField(env);
     this.controller = new ROVController(config);
     this.lastNorm = new Array(config.thrusters.length).fill(0);
+    this.thrustFilt = new Array(config.thrusters.length).fill(0);
     const { length, width, height } = config.dimensions;
     this.rovRadius = Math.sqrt(length * length + width * width + height * height) * 0.55;
+    // 附加质量 → 有效质量（按体轴；真实 ROV 垂直方向附加质量最大）
+    const am = config.addedMass?.lin ?? [0, 0, 0];
+    this.effMass.set(
+      config.massKg * (1 + am[0]),
+      config.massKg * (1 + am[1]),
+      config.massKg * (1 + am[2]),
+    );
     // 解锁后悬停：抵消净浮力（ρgV - mg，正 = 上浮）
     this.hoverCompY = -(SEAWATER_DENSITY * config.displacementM3 * GRAVITY - config.massKg * GRAVITY);
   }
@@ -118,6 +135,20 @@ export class PhysicsWorld {
     this.body.setPose(position, quaternion);
   }
 
+  /** 湍流偏航扰动：涡流对 yaw 的轻微干扰力矩（随湍流强度与深度减弱） */
+  private applyTurbulenceTorque(dt: number): void {
+    const e = this.environment.get();
+    if (e.turbulence < 0.01) return;
+    const depth = -this.body.position.y;
+    const fade = Math.max(0, 1 - depth / 40); // 深水区涡流影响减弱
+    const n = fbm3(this.body.position.x * 0.03, this.body.position.z * 0.03, this.time * 0.35, 2);
+    this.tauBody.y += n * e.turbulence * 1.6 * fade;
+    // 轻微俯仰/横滚扰动（更真实的不规则流）
+    const n2 = fbm3(this.body.position.z * 0.03 + 50, this.body.position.x * 0.03, this.time * 0.3 + 20, 2);
+    this.tauBody.x += n2 * e.turbulence * 0.8 * fade * dt * 40;
+    this.tauBody.z += fbm3(this.body.position.x * 0.03 + 100, this.body.position.z * 0.03, this.time * 0.28 + 40, 2) * e.turbulence * 0.8 * fade * dt * 40;
+  }
+
   /** 姿态角钳制（机型 attitudeLimits；限制后角速度法向分量归零防止反复越界） */
   private clampAttitude(): void {
     const lim = this.body.config.attitudeLimits;
@@ -161,8 +192,14 @@ export class PhysicsWorld {
     }
     this.lastNorm = alloc.norm;
 
-    // 3) 合力（体坐标系）：推进器 + 水力
-    this.allocator.applyThrust(alloc.thrust, this.fBody, this.tauBody);
+    // 2.5) 推进器一阶响应（真实推进器有启动/响应延迟）
+    const fk = Math.min(1, dt / this.thrusterTau);
+    for (let i = 0; i < this.thrustFilt.length; i++) {
+      this.thrustFilt[i] += (alloc.thrust[i] - this.thrustFilt[i]) * fk;
+    }
+
+    // 3) 合力（体坐标系）：推进器（滤波后）+ 水力
+    this.allocator.applyThrust(this.thrustFilt, this.fBody, this.tauBody);
 
     // 4) 水流（世界系）；DVL 开启时洋流削弱（移动受干扰更小）
     this.current.velocityAt(this.body.position, this.time, this.currentWorld);
@@ -181,8 +218,14 @@ export class PhysicsWorld {
       this.body.velocityWorld.x *= 0.985;
       this.body.velocityWorld.z *= 0.985;
     }
-    const accelWorld = this.fWorld.divideScalar(this.body.config.massKg);
-    integrateLinear(this.body.position, this.body.velocityWorld, accelWorld, dt);
+    // 附加质量平动：a = F / m_eff（按轴；质量在体轴定义，对低速操作近似充分）
+    this.fWorld.x /= this.effMass.x;
+    this.fWorld.y /= this.effMass.y;
+    this.fWorld.z /= this.effMass.z;
+    integrateLinear(this.body.position, this.body.velocityWorld, this.fWorld, dt);
+
+    // 湍流偏航扰动：水流涡流使 ROV 轻微偏转（真实湍流对姿态的干扰）
+    this.applyTurbulenceTorque(dt);
 
     // 转动：α = I⁻¹(τ - ω×Iω)；角速度钳制防发散（大力矩机型数值稳定）
     const alpha = this.body.angularAcceleration(this.tauBody);

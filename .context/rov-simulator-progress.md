@@ -507,3 +507,12 @@
 - 场景 collider 对齐：PipelineExt 支撑墩 ±2.2/管道 y 动态、Ship 船艏延长、Bridge deck、OilRig 腿扩大、Salvage 沉船扩大
 - 渲染：setQuality 补阴影相机/PMREM、Engine.quality 构造赋值、姿态仪圆锥方向
 - 回归：build/smoke/dev 通过；M2S roll 2s=75.0（限位）、pitch 8s=75.0 roll=0、locked+DVL 正常上浮
+
+## 本轮（流体模拟增强 5 项）
+- 附加质量（standard heave 0.8/M2S 0.55；转动 effInertia）
+- 推进器一阶响应 τ=0.12s（thrustFilt 低通）
+- 近底效应：<3m 阻尼增强（垂向 ×2.2）
+- 湍流偏航扰动（applyTurbulenceTorque，随深度减弱）
+- 海况浅层涌浪（<8m 且 seaState>0 湍流增强）
+- 验证：限速 3.00、roll 75 限位、hover 10.00、下潜 4.54kn、响应平滑
+- 文档：docs/03 §7 + DEVELOPMENT_LOG M24
