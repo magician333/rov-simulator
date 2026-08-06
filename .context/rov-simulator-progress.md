@@ -565,3 +565,8 @@
 - SettingsMenu memo 缺 dvlEnabled/gamepadSensitivity（DVL 关不掉）→ 修复 + maxspeed 钳制
 - 设置菜单打开时清动作残留；SonarView updateHz 节流；RecordsPage 任务名 i18n；去重 0.5m；tube seg 16
 - 回归：build/smoke/dev 通过；M2S roll 75/dive 5.44m/reset 锁同步
+
+## 本轮（贴近实体修复）
+- 碰撞反弹 e 0.15→0.03（流体推力变弱后反弹无法压回 → 无法贴近实体；现贴住，间距=碰撞半径）
+- 近底效应弱化：范围 3→1.5m、垂向 ×2.2→×1.6（仍"粘"但不阻挡靠近）
+- 验证：贴海底 0.88m、贴方块 0.88m

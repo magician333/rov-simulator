@@ -138,8 +138,8 @@ function resolveBox(
 function applyVelocityResponse(vel: THREE.Vector3, nx: number, ny: number, nz: number): void {
   const vn = vel.x * nx + vel.y * ny + vel.z * nz;
   if (vn >= 0) return;
-  // 法向：轻微反弹（e=0.15）
-  const e = 0.15;
+  // 法向：几乎不反弹（e=0.03，真实 ROV 撞击后贴住；避免流体推力变弱后无法压回）
+  const e = 0.03;
   // 切向：摩擦衰减（模拟与结构/道具表面摩擦，避免打滑）
   const friction = 0.62;
   const tx = vel.x - vn * nx;

@@ -279,3 +279,9 @@ Verified: M2S full throttle 3.00 kn, roll 2 s hits 75° limit, hover holds 10.00
 - Opening the settings menu while holding Space clears residual action state (no accidental auto-complete).
 - Sonar panel throttles by current `updateHz` (low-freq actually saves work); RecordsPage task names localized; removed last hardcoded "道具".
 - Sonar dedupe threshold 0.9→0.5 m (fewer merged distinct objects); M2S frame tubes seg 10→16; flow-direction comments unified.
+
+## M34 — Can't get close to solids fixed (restitution + near-bottom)
+
+- Collision restitution 0.15 → 0.03: with the added fluid physics (thruster lag, added mass, cross-flow) the rebound could not be pushed back, so the ROV hovered away from hulls/seabed/boxes. Nearly-zero bounce lets it sit against surfaces (gap = collision radius).
+- Near-bottom damping softened: range 3 m → 1.5 m, vertical factor ×2.2 → ×1.6 max (still viscous near the floor but not blocking approach).
+- Verified: ROV rests at 0.88 m (its radius) from seabed and from a box face; dive & smoke clean.

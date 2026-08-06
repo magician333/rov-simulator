@@ -65,17 +65,17 @@ export class WaterForces {
 
     // 3) 平动阻尼（相对水流速度，二次阻尼）F = -0.5ρ·CdA·|v_rel|·v_rel，累减
     body.relativeVelocityBody(currentWorld, this.vRel);
-    // 近底效应：距海底 < 3m 时阻尼增强（垂向更明显），操作更"粘"贴合真实
+    // 近底效应：距海底 < 1.5m 时阻尼略增强（保持贴近手感但不过度阻挡）
     const sea = seabedHeight(body.position.x, body.position.z);
     const d = body.position.y - sea;
     let kx = 1;
     let ky = 1;
     let kz = 1;
-    if (d < 3) {
-      const t = 1 - d / 3;
-      kx = 1 + 0.5 * t;
-      ky = 1 + 1.2 * t;
-      kz = 1 + 0.5 * t;
+    if (d < 1.5) {
+      const t = 1 - d / 1.5;
+      kx = 1 + 0.3 * t;
+      ky = 1 + 0.6 * t;
+      kz = 1 + 0.3 * t;
     }
     forceOut.x -= this.linHalf[0] * Math.abs(this.vRel.x) * this.vRel.x * kx;
     forceOut.y -= this.linHalf[1] * Math.abs(this.vRel.y) * this.vRel.y * ky;
