@@ -137,7 +137,8 @@ export class GeneratedROVModel {
   private buildHull(): void {
     const { width, height, length } = this.cfg.dimensions;
     if (this.variant === 'm2') {
-      const hull = new THREE.Mesh(new THREE.CylinderGeometry(width * 0.3, width * 0.3, length * 0.55, 24), this.matHull);
+      // 中控舱半径加大，与外框更贴合
+      const hull = new THREE.Mesh(new THREE.CylinderGeometry(width * 0.36, width * 0.36, length * 0.55, 24), this.matHull);
       hull.rotation.x = Math.PI / 2;
       hull.position.set(0, 0, 0);
       this.root.add(hull);
@@ -178,7 +179,15 @@ export class GeneratedROVModel {
     const g = new THREE.Group();
     g.name = t.id;
     g.position.set(...t.position);
-    const dir = new THREE.Vector3(...t.direction);
+    // 视觉导管方向：M2 变体更水平朝外（物理推力方向保持配置不变，避免分配矩阵病态）
+    let dir = new THREE.Vector3(...t.direction);
+    if (this.variant === 'm2') {
+      dir = new THREE.Vector3(
+        Math.sign(t.direction[0]) * 0.72,
+        t.direction[1] * 0.64,
+        t.direction[2],
+      ).normalize();
+    }
     const radius = t.ductRadius;
 
     const duct = new THREE.Mesh(new THREE.CylinderGeometry(radius * 1.3, radius * 1.3, radius * 1.5, 24, 1, true), this.matDuct);

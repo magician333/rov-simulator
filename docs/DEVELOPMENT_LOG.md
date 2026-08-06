@@ -252,3 +252,9 @@ Verified: M2S full throttle 3.00 kn, roll 2 s hits 75° limit, hover holds 10.00
 - **Distance-aware blur/overlay**: VisibilityBlur rewritten as a single depth-aware pass — each pixel's camera distance (from the render-target depth texture) drives blur strength and murky-overlay opacity. Near objects (< ~0.4× visibility) stay sharp; distant ones blur then fade into the murk color. This matches real water (see clearly near, nothing far).
 - **Hover release earlier**: hover blend releases at input ≥ 0.33 (was 0.2) so light dive inputs break free sooner.
 - Note: all-scene dive physics verified clean (seafloor 10-14 m); the "1.7 m stuck" perception is hover pull on light inputs — now released earlier.
+
+## M31 — M2S hull fit + visual thruster orientation outward
+
+- **M2S hull**: center-can radius enlarged (width×0.30 → 0.36) to sit tighter against the slim outer frame.
+- **M2S thrusters visual outward**: duct/housing orientation now points more horizontally outward for M2 (visual x 0.5→0.72, y 0.7→0.45, normalized) — physics thruster directions stay as tuned (changing them made the allocation matrix ill-conditioned → NaN; verified roll 75°/dive fine after revert, visual-only change keeps both).
+- **Dive-depth note**: open-water dive reaches the seafloor in every scene (10-14 m); Dam/Ship have large colliders up to the water surface (structurally correct — ROV cannot pass through hulls/dams; navigate around structures to dive).
