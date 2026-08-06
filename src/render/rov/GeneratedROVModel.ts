@@ -179,12 +179,13 @@ export class GeneratedROVModel {
     const g = new THREE.Group();
     g.name = t.id;
     g.position.set(...t.position);
-    // 视觉导管方向：M2 变体更水平朝外（物理推力方向保持配置不变，避免分配矩阵病态）
+    // 视觉导管方向：M2 变体保留斜置特征（上方斜向下、下方斜向上）+ 一定外张
+    // （物理推力方向保持配置不变，避免分配矩阵病态）
     let dir = new THREE.Vector3(...t.direction);
     if (this.variant === 'm2') {
       dir = new THREE.Vector3(
-        Math.sign(t.direction[0]) * 0.72,
-        t.direction[1] * 0.64,
+        Math.sign(t.direction[0]) * 0.55,
+        t.direction[1] * 0.85,
         t.direction[2],
       ).normalize();
     }

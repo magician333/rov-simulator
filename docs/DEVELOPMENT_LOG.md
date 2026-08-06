@@ -258,3 +258,7 @@ Verified: M2S full throttle 3.00 kn, roll 2 s hits 75° limit, hover holds 10.00
 - **M2S hull**: center-can radius enlarged (width×0.30 → 0.36) to sit tighter against the slim outer frame.
 - **M2S thrusters visual outward**: duct/housing orientation now points more horizontally outward for M2 (visual x 0.5→0.72, y 0.7→0.45, normalized) — physics thruster directions stay as tuned (changing them made the allocation matrix ill-conditioned → NaN; verified roll 75°/dive fine after revert, visual-only change keeps both).
 - **Dive-depth note**: open-water dive reaches the seafloor in every scene (10-14 m); Dam/Ship have large colliders up to the water surface (structurally correct — ROV cannot pass through hulls/dams; navigate around structures to dive).
+
+## M32 — M2S duct visual diagonal (upper down, lower up)
+
+- M2S thruster ducts now visually tilt diagonally: upper thrusters (y+) point down-outward, lower (y−) point up-outward (visual x 0.72→0.55, y ×0.64→0.85, normalized). Physics directions untouched (stable allocation).
