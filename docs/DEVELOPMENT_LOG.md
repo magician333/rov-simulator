@@ -293,3 +293,10 @@ Several colliders were several metres larger than their visuals, so the ROV stop
 - **Bridge deck**: collider y=8.5 vs visual deck capBedY+16.5 (~4.5-6.5) → now aligned (was blocking 2-4 m above the deck).
 - **Salvage crates**: 4 sphere colliders r=2.6 (larger than the 2.4×2×6 crates in width) → box colliders half(1.3,1.1,3.1) with rotationY matching visuals.
 - Combined with the earlier restitution 0.03, the ROV now approaches hulls, seabed and boxes right up to its collision radius.
+
+## M36 — Stern & collision-detection sweep
+
+- **Ship stern**: verified hull collider (z→21) covers the stern box (z→19.9); propeller sphere tightened r 2.6→2.2 @ z 20.6 (closer to visual shaft/blades/rudder) so the ROV can get closer to the propeller target.
+- **PipelineExt pipe**: collider half 2.5 → 1.6 (visual pipe r 1.1 + flanges 1.45) — was blocking ~1.4 m off the pipe surface; vertical half 0.9 → 1.2 (now actually covers the pipe).
+- **Salvage hull**: collider half-x 5 → 6.2 (covers rotated visual AABB ±6).
+- OilRig manifold and Bridge piers checked: colliders match visuals (manifold pipes ±5.5 vs collider ±5 is negligible; pier r 3.0-3.4 vs collider 3.2-3.5 OK).

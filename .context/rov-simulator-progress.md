@@ -576,3 +576,9 @@
 - Bridge deck collider y=8.5 → seabedHeight+16.5（原挡 2-4m）
 - Salvage 4 个集装箱 sphere r2.6 → box 半(1.3,1.1,3.1)+rotationY（原挡 ~2m）
 - 回归 build/smoke/dev 通过
+
+## 本轮（船尾/碰撞检测复查）
+- Ship 船尾核对合理；螺旋桨 sphere 2.6→2.2（更贴视觉，目标可更近）
+- PipelineExt 管道 collider 半 2.5→1.6、y 0.9→1.2（原挡 ~1.4m）
+- Salvage 沉船 collider x 5→6.2（覆盖旋转视觉）
+- OilRig 管汇 / Bridge 桥墩核对匹配

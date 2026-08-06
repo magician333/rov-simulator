@@ -17,7 +17,7 @@ class PipelineExtSceneImpl implements SceneDefinition {
   readonly spawn = { position: [0, -1.2, 38] as [number, number, number], yawDeg: 180 };
   readonly colliders = [
     // 管道本体（y 随地形与视觉 seabedHeight(0,0)+1.1 一致）
-    { type: 'box' as const, position: new THREE.Vector3(0, seabedHeight(0, 0) + 1.1, 0), halfExtents: new THREE.Vector3(2.5, 0.9, 32) },
+    { type: 'box' as const, position: new THREE.Vector3(0, seabedHeight(0, 0) + 1.1, 0), halfExtents: new THREE.Vector3(1.6, 1.2, 32) },
     // 支撑墩（与视觉 ±2.2 对齐）
     { type: 'box' as const, position: new THREE.Vector3(2.2, -11.5, 0), halfExtents: new THREE.Vector3(0.8, 1.2, 30) },
     { type: 'box' as const, position: new THREE.Vector3(-2.2, -11.5, 0), halfExtents: new THREE.Vector3(0.8, 1.2, 30) },
