@@ -241,3 +241,8 @@ Verified: M2S full throttle 3.00 kn, roll 2 s hits 75° limit, hover holds 10.00
 - **Gaussian blur post-processing**: new `VisibilityBlur` (EffectComposer + Horizontal/VerticalBlurShader). Blur ramps when visibility < 5 m (0.2 m → ~max blur) and when turbidity > 0.3. Composer is lazy-created and only renders when blur > 0 (zero overhead otherwise); resize & dispose wired.
 - Wave vertical orbital component further reduced (0.3 → 0.15) for stable shallow-water diving.
 - Verified all 8 scenes dive fine from real spawns (the only prior blocker was pipeline_int, already fixed); probe grid confirms no other scene blocks below 2.5 m.
+
+## M29 — Solid-color visibility overlay + continuous hover blend
+
+- **Solid-color overlay**: VisibilityBlur now mixes a murky color over the whole 3D frame as visibility → 0.2 m (opacity up to ~0.9) or turbidity → high — distant outlines can no longer be seen through the blur.
+- **Continuous hover blend**: hover compensation no longer toggles on/off by an idle threshold; it blends out smoothly as input magnitude grows (full hold at 0 input, zero at ≥0.2). Light dive inputs now always descend instead of being pulled back by hover. Verified: hover holds 3.00 m, light dive (0.05) descends slowly, full dive descends fast; all-scene dive probes reach >10 m.

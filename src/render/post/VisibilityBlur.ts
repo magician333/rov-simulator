@@ -11,10 +11,37 @@ import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass.js';
 import { HorizontalBlurShader } from 'three/examples/jsm/shaders/HorizontalBlurShader.js';
 import { VerticalBlurShader } from 'three/examples/jsm/shaders/VerticalBlurShader.js';
 
+/** 纯色遮罩 shader：低能见度时以浑浊色覆盖画面（彻底遮挡远处轮廓） */
+const OverlayShader = {
+  uniforms: {
+    tDiffuse: { value: null as THREE.Texture | null },
+    uColor: { value: new THREE.Color(0x16261c) },
+    uOpacity: { value: 0 },
+  },
+  vertexShader: /* glsl */ `
+    varying vec2 vUv;
+    void main() {
+      vUv = uv;
+      gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+    }
+  `,
+  fragmentShader: /* glsl */ `
+    uniform sampler2D tDiffuse;
+    uniform vec3 uColor;
+    uniform float uOpacity;
+    varying vec2 vUv;
+    void main() {
+      vec4 tex = texture2D(tDiffuse, vUv);
+      gl_FragColor = mix(tex, vec4(uColor, 1.0), uOpacity);
+    }
+  `,
+};
+
 export class VisibilityBlur {
   private composer: EffectComposer | null = null;
   private passH: ShaderPass;
   private passV: ShaderPass;
+  private passOverlay: ShaderPass;
   private blur = 0;
 
   constructor(
@@ -26,16 +53,19 @@ export class VisibilityBlur {
     this.composer.addPass(new RenderPass(scene, camera));
     this.passH = new ShaderPass(HorizontalBlurShader);
     this.passV = new ShaderPass(VerticalBlurShader);
+    this.passOverlay = new ShaderPass(OverlayShader as never);
     this.passH.uniforms['h'].value = 0;
     this.passV.uniforms['v'].value = 0;
-    // 两个 pass 共享 renderToScreen：最后一个 pass 输出到屏幕
-    this.passV.renderToScreen = true;
+    this.passOverlay.uniforms['uOpacity'].value = 0;
+    // 纯色遮罩最后输出到屏幕
+    this.passOverlay.renderToScreen = true;
     this.composer.addPass(this.passH);
     this.composer.addPass(this.passV);
+    this.composer.addPass(this.passOverlay);
   }
 
-  /** 设置模糊强度 0..1（低能见度/浊度驱动） */
-  setBlur(amount: number): void {
+  /** 设置模糊强度 0..1（低能见度/浊度驱动）；同时设置纯色遮罩透明度 */
+  setBlur(amount: number, overlayOpacity = 0): void {
     this.blur = Math.max(0, Math.min(1, amount));
     // 偏移按分辨率归一化：blur=1 → 约 8px
     const w = this.renderer.domElement.width || 1;
@@ -43,6 +73,7 @@ export class VisibilityBlur {
     const px = this.blur * 8;
     this.passH.uniforms['h'].value = px / w;
     this.passV.uniforms['v'].value = px / h;
+    this.passOverlay.uniforms['uOpacity'].value = Math.max(0, Math.min(1, overlayOpacity));
   }
 
   get active(): boolean {

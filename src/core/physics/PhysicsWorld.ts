@@ -105,13 +105,6 @@ export class PhysicsWorld {
     return this.motorLocked;
   }
 
-  /** 是否无控制输入（解锁后悬停判定） */
-  private isIdleInput(): boolean {
-    const i = this.input;
-    return Math.abs(i.surge) < 0.01 && Math.abs(i.sway) < 0.01 && Math.abs(i.heave) < 0.01 &&
-      Math.abs(i.yaw) < 0.01 && Math.abs(i.pitch) < 0.01 && Math.abs(i.roll) < 0.01;
-  }
-
   get controllerRef(): ROVController {
     return this.controller;
   }
@@ -228,11 +221,19 @@ export class PhysicsWorld {
     // 平动：F_world = R·F_body；a = F/m
     this.invQuat.copy(this.body.quaternion).invert();
     this.fWorld.copy(this.fBody).applyQuaternion(this.body.quaternion);
-    // 解锁 + 无输入：悬停保持当前位置（抵消净浮力 + 水平阻尼）
-    if (!this.motorLocked && this.isIdleInput()) {
-      this.fWorld.y += this.hoverCompY;
-      this.body.velocityWorld.x *= 0.985;
-      this.body.velocityWorld.z *= 0.985;
+    // 解锁悬停：无输入时抵消净浮力保持位置；输入越强悬停力越弱（连续过渡，避免轻推时保持力跳变）
+    if (!this.motorLocked) {
+      const i = this.input;
+      const inMag = Math.max(
+        Math.abs(i.surge), Math.abs(i.sway), Math.abs(i.heave),
+        Math.abs(i.yaw), Math.abs(i.pitch), Math.abs(i.roll),
+      );
+      const hold = 1 - Math.min(1, inMag * 5); // 输入 0 → 完全保持；输入 ≥0.2 → 无保持
+      if (hold > 0) {
+        this.fWorld.y += this.hoverCompY * hold;
+        this.body.velocityWorld.x *= 0.985;
+        this.body.velocityWorld.z *= 0.985;
+      }
     }
     // 附加质量平动：a = F / m_eff（按轴；质量在体轴定义，对低速操作近似充分）
     this.fWorld.x /= this.effMass.x;
