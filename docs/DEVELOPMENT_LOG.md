@@ -262,3 +262,20 @@ Verified: M2S full throttle 3.00 kn, roll 2 s hits 75° limit, hover holds 10.00
 ## M32 — M2S duct visual diagonal (upper down, lower up)
 
 - M2S thruster ducts now visually tilt diagonally: upper thrusters (y+) point down-outward, lower (y−) point up-outward (visual x 0.72→0.55, y ×0.64→0.85, normalized). Physics directions untouched (stable allocation).
+
+## M33 — Deep review round 3: blur fixes, reset sync, cross-flow, UI deps
+
+**Critical render fixes (visibility now actually works)**
+- `VisibilityBlur.linearDist` was inverted/wrong sign → blur & murky overlay never applied (this was why "still saw distant outlines" persisted). Fixed to `(near·far)/(far − d·(far−near))`; `uResolution` now holds texel size (was 1 → taps sampled outside the screen); blur taps widened 5→7 with normalized offsets; `setSize` disposes the old depth texture (resize leak).
+- Fog density recalibrated for FogExp2 quadratic decay (`1.353/effV` ≈ 16% at visibility distance).
+
+**Core fixes**
+- `SimulationEngine.reset` now calls `setMotorLocked(true)` (was only setting its own flag → HUD said locked but physics stayed unlocked after restart); reset also clears DVL anchor, thruster filter and current vector.
+- M2S cross-flow coupling now uses the true transverse component of relative flow per thruster (was misclassified all 8 as vertical → vVert never applied).
+- DVL idle uses a 0.01 threshold (consistent with hover).
+
+**UI fixes**
+- SettingsMenu memo deps now include `dvlEnabled`/`gamepadSensitivity`/`speedCap` (DVL toggle couldn't be turned off — stale closure); maxspeed left-step clamps to the vehicle cap.
+- Opening the settings menu while holding Space clears residual action state (no accidental auto-complete).
+- Sonar panel throttles by current `updateHz` (low-freq actually saves work); RecordsPage task names localized; removed last hardcoded "道具".
+- Sonar dedupe threshold 0.9→0.5 m (fewer merged distinct objects); M2S frame tubes seg 10→16; flow-direction comments unified.

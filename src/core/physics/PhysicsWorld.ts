@@ -99,6 +99,12 @@ export class PhysicsWorld {
   setMotorLocked(locked: boolean): void {
     this.motorLocked = locked;
     this.controller.setMotorLocked(locked);
+    // 瞬态清零：重置后不残留旧锚点/推力/水流
+    if (locked) {
+      this.dvlActive = false;
+      this.thrustFilt.fill(0);
+      this.currentWorld.set(0, 0, 0);
+    }
   }
 
   getMotorLocked(): boolean {
@@ -191,14 +197,18 @@ export class PhysicsWorld {
     this.lastNorm = alloc.norm;
 
     // 2.5) 推进器斜流耦合：横向相对流使推进器效率下降（真实 ROV 横移/下潜时推进力减弱）
+    // 对每台推进器取相对流在其推力轴法向上的分量（真交叉流），全斜置布局同样生效
     this.body.relativeVelocityBody(this.currentWorld, this.vRelTmp);
-    const vLatH = Math.hypot(this.vRelTmp.x, this.vRelTmp.z);
-    const vVert = Math.abs(this.vRelTmp.y);
     const cfgT = this.body.config.thrusters;
     for (let i = 0; i < alloc.thrust.length; i++) {
-      // 垂直推进器受水平流影响，水平推进器受垂直流影响（简化交叉耦合）
-      const vT = Math.abs(cfgT[i].direction[1]) > 0.5 ? vLatH : vVert;
-      alloc.thrust[i] *= 1 / (1 + 0.25 * Math.min(1, (vT * vT) / 4));
+      const d = cfgT[i].direction;
+      // 轴向分量 = vRel·dirHat；横向 = sqrt(|vRel|² - 轴向²)
+      const len2 = d[0] * d[0] + d[1] * d[1] + d[2] * d[2];
+      const inv = len2 > 1e-9 ? 1 / Math.sqrt(len2) : 1;
+      const axial = (this.vRelTmp.x * d[0] + this.vRelTmp.y * d[1] + this.vRelTmp.z * d[2]) * inv;
+      const vRel2 = this.vRelTmp.lengthSq();
+      const vT2 = Math.max(0, vRel2 - axial * axial);
+      alloc.thrust[i] *= 1 / (1 + 0.25 * Math.min(1, vT2 / 4));
     }
 
     // 2.6) 推进器一阶响应（真实推进器有启动/响应延迟）
@@ -264,8 +274,8 @@ export class PhysicsWorld {
     if (this.dvlOn && !this.motorLocked) {
       const inp = this.input;
       const idle =
-        inp.surge === 0 && inp.sway === 0 && inp.heave === 0 &&
-        inp.yaw === 0 && inp.pitch === 0 && inp.roll === 0;
+        Math.abs(inp.surge) < 0.01 && Math.abs(inp.sway) < 0.01 && Math.abs(inp.heave) < 0.01 &&
+        Math.abs(inp.yaw) < 0.01 && Math.abs(inp.pitch) < 0.01 && Math.abs(inp.roll) < 0.01;
       if (idle) {
         if (!this.dvlActive) {
           this.dvlAnchor.copy(this.body.position);

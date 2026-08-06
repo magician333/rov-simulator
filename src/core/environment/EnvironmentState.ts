@@ -14,7 +14,7 @@ export interface EnvironmentParams {
   riverKnots: number;
   /** 流速 m/s，范围 [0, 3]（海况/河流模式由换算得出） */
   currentSpeed: number;
-  /** 流向（来流方向，度）：0=北(-Z)、90=东(+X)、180=南(+Z)、270=西(-X) */
+  /** 流向（水流方向，度）：0=朝南(+Z)、90=朝东(+X)、180=朝北(-Z)、270=朝西(-X) */
   currentDirectionDeg: number;
   /** 湍流强度 0..1 */
   turbulence: number;

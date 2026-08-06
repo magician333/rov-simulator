@@ -1,7 +1,7 @@
 /**
  * DistanceSonar：定距声纳（避碰测距，POV HUD 用）。
  * 沿 ROV 体坐标系六向（前/后/左/右/上/下）发射射线，返回最近距离。
- * 采样频率由调用方控制（TrainingScreen 每 200ms）。
+ * 采样频率由调用方控制（TrainingScreen 独立 30Hz 采样，HUD 读取最新值）。
  */
 
 import * as THREE from 'three';

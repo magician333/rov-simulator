@@ -98,8 +98,15 @@ export function SonarView({ engineRef }: { engineRef: React.MutableRefObject<Eng
     if (!ctx) return;
     let refreshCount = 0;
     let frameCounter = 0;
+    let lastScan = 0;
 
     const interval = window.setInterval(() => {
+      // 按当前 updateHz 节流（低频档节省算力；高频档保持 8.3Hz 上限）
+      const hz = paramsRef.current.updateHz;
+      const nowMs = Date.now();
+      const minGap = Math.max(83, Math.floor(1000 / Math.max(1, hz)));
+      if (nowMs - lastScan < minGap) return;
+      lastScan = nowMs;
       // 引擎场景可能已重建（换训练会话/重开）：scene 引用变化时重建 sampler
       const eng = engineRef.current;
       if (!eng || !eng.scene) return;

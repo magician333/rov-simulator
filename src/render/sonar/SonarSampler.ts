@@ -113,7 +113,7 @@ export class SonarSampler {
         .sort((x, y) => x.distance - y.distance)
         .reduce<SonarBeamHit[]>((acc, e) => {
           const last = acc[acc.length - 1];
-          if (last && Math.abs(last.distance - e.distance) < 0.9) {
+          if (last && Math.abs(last.distance - e.distance) < 0.5) {
             if (e.strength > last.strength) last.strength = e.strength;
           } else {
             acc.push({ distance: e.distance, strength: e.strength });

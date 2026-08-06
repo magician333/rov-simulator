@@ -47,7 +47,7 @@ function run(seconds: number, label: string, input: () => void, sampleEvery = 60
 // 1) 无输入：微正浮力应缓慢上浮，姿态自稳
 run(5, '空载漂移', () => { sim.clearControlInput(); });
 
-// 2) 全油门前进（surge=1）→ 期望收敛 ≈ 4.4 kn
+// 2) 全油门前进（surge=1）→ 期望收敛 ≈ 机型 maxSpeedKnots（3 kn）
 resetSim();
 sim.setControlInput({ surge: 1 });
 run(30, '全油门前进', () => sim.setControlInput({ surge: 1 }));

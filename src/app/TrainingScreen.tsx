@@ -662,7 +662,7 @@ export function TrainingScreen() {
       gripperOpenRef.current = 0; // 夹爪闭合
       setGripperOpen(0);
       engine.setGripper(0);
-      setGrabbedName(b.obj.name || '道具');
+      setGrabbedName(b.obj.name || t('val_item'));
       setGrabMsg(null);
     } else {
       setGrabMsg(t('grab_too_far'));

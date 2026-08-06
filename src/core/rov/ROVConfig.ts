@@ -108,7 +108,7 @@ export const DEFAULT_ROV_CONFIG: ROVConfig = {
   // 姿态限制：俯仰 ±60°、横滚 ±45°
   attitudeLimits: { pitchDeg: 60, rollDeg: 45 },
   // 附加质量（排开水体惯性）：垂直方向最大（真实 ROV 垂直附加质量 ≈ 干质量 50-100%）
-  addedMass: { lin: [0.45, 0.8, 0.45], ang: [0.3, 0.3, 0.3] },
+  addedMass: { lin: [0.45, 0.8, 0.38], ang: [0.3, 0.3, 0.3] },
   description: '标准 8 推进器矢量布局，可独立控制全部六个自由度。',
   model: { type: 'generated' },
   maxSpeedKnots: 3,
@@ -188,7 +188,7 @@ export const CHASING_M2_CONFIG: ROVConfig = {
   // 姿态限制 ±75°：保持翻转灵活性，同时避免欧拉分解失真（显示/世界模式/一键水平依赖 YXZ 欧拉）
   attitudeLimits: { pitchDeg: 75, rollDeg: 75 },
   // 附加质量：轻型机更小（保持机动轻盈）
-  addedMass: { lin: [0.3, 0.55, 0.3], ang: [0.2, 0.2, 0.2] },
+  addedMass: { lin: [0.3, 0.55, 0.24], ang: [0.2, 0.2, 0.2] },
   // 俯仰/横滚灵活性（转动响应 ×16）
   torqueScale: { yaw: 1, pitch: 32, roll: 32 },
   maxSwaySpeedKnots: 1.5,

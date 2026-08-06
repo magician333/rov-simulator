@@ -137,7 +137,7 @@ function RecordsPage({ onBack }: { onBack: () => void }) {
                 <tr key={r.id} style={{ color: '#d7eef8' }}>
                   <td style={td}>{new Date(r.date).toLocaleString(language === 'zh' ? 'zh-CN' : language === 'es' ? 'es-ES' : 'en-US')}</td>
                   <td style={td}>{t('scene_' + r.sceneId + '_name' as DictKey)}</td>
-                  <td style={td}>{r.taskId}</td>
+                  <td style={td}>{t('task_' + r.taskId + '_name' as DictKey)}</td>
                   <td style={td}>{r.completed ? '✅ ' + t('records_ok') : '❌ ' + t('records_fail')}</td>
                   <td style={td}>{r.durationSec.toFixed(1)}s</td>
                   <td style={td}>{r.maxDepthM.toFixed(1)}m</td>

@@ -72,7 +72,7 @@ export class SimulationEngine {
     this.lastThrusterNorm.fill(0);
     this.clearControlInput();
     this.physics.controllerRef.cancelLevel();
-    this.motorLocked = true; // 每次重置/重开：电机锁定
+    this.setMotorLocked(true); // 每次重置/重开：电机锁定（同步 physics+controller）
   }
 
   /** 应用场景局部水流区（场景切换时） */

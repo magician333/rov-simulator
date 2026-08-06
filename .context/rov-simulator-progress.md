@@ -557,3 +557,11 @@
 
 ## 本轮（M2S 导管斜置视觉）
 - M2S 推进器导管视觉：上方斜向下、下方斜向上（x0.55/y0.85 归一化），物理方向不变
+
+## 本轮（深度审查第三轮 + 修复）
+- 关键：VisibilityBlur 距离公式符号/量级错误 → 模糊/遮罩从不生效（"还能看到远处"真根因）→ 修复 + uResolution 纹素 + 7-tap + resize dispose + fog FogExp2 校准
+- SimulationEngine.reset 电机锁同步 physics（HUD/物理一致）+ 瞬态清零
+- M2S 斜流耦合真交叉流（全斜置布局生效）；DVL idle 阈值统一
+- SettingsMenu memo 缺 dvlEnabled/gamepadSensitivity（DVL 关不掉）→ 修复 + maxspeed 钳制
+- 设置菜单打开时清动作残留；SonarView updateHz 节流；RecordsPage 任务名 i18n；去重 0.5m；tube seg 16
+- 回归：build/smoke/dev 通过；M2S roll 75/dive 5.44m/reset 锁同步

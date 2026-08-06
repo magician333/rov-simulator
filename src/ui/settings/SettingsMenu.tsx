@@ -258,7 +258,7 @@ function SettingsMenuInner(props: {
           step: 0.1,
           curValue: Math.min(maxSpeedKnots, speedCap),
           onValue: (v) => setMaxSpeedKnots(v),
-          onLeft: () => setMaxSpeedKnots(Math.max(0.5, Math.round((maxSpeedKnots - 0.1) * 10) / 10)),
+          onLeft: () => setMaxSpeedKnots(Math.max(0.5, Math.min(speedCap, Math.round((maxSpeedKnots - 0.1) * 10) / 10))),
           onRight: () => setMaxSpeedKnots(Math.min(speedCap, Math.round((maxSpeedKnots + 0.1) * 10) / 10)),
         },
       );
@@ -276,7 +276,7 @@ function SettingsMenuInner(props: {
       );
     }
     return list;
-  }, [tab, language, axisMode, wheelMode, powerCurve, powerLevel, gamepadMode, maxSpeedKnots, hudLayout, sonarVisible, graphicsQuality, units, props.envParams]);
+  }, [tab, language, axisMode, wheelMode, powerCurve, powerLevel, gamepadMode, maxSpeedKnots, hudLayout, sonarVisible, graphicsQuality, units, dvlEnabled, gamepadSensitivity, speedCap, props.envParams]);
 
   const nav: SettingsNav = useMemo(() => {
     const clamp = (f: number) => Math.max(0, Math.min(items.length - 1, f));

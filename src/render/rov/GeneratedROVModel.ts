@@ -85,7 +85,7 @@ export class GeneratedROVModel {
     const hz = length / 2;
     // M2 变体外框更细（细管塑料骨架）
     const r = this.variant === 'm2' ? 0.02 : 0.022;
-    const seg = 10;
+    const seg = 16;
     const makeTube = (len: number, ax: 'x' | 'y' | 'z') => {
       const geo = new THREE.CylinderGeometry(r, r, len, seg);
       const m = new THREE.Mesh(geo, this.matFrame);

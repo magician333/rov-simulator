@@ -43,10 +43,9 @@ const VisibilityShader = {
     uniform vec2 uResolution;
     varying vec2 vUv;
 
-    // 深度缓冲（非线性 0..1）→ 到相机距离（米）
+    // 深度缓冲（非线性 0..1）→ 到相机距离（米，正值）
     float linearDist(float d) {
-      float z = (2.0 * uNear) / (uFar + uNear - d * (uFar - uNear));
-      return -z;
+      return (uNear * uFar) / (uFar - d * (uFar - uNear));
     }
 
     void main() {
@@ -60,25 +59,24 @@ const VisibilityShader = {
       if (strength < 0.004) {
         tex = texture2D(tDiffuse, vUv);
       } else {
-        float sigma = 1.0 + strength * 14.0; // 模糊像素半径
-        float pixel = uResolution.x; // 偏移单位（相对屏幕宽）
-        float reach = 1.0 + strength * 3.0;
-        // 水平 5-tap
+        float sigma = 1.0 + strength * 12.0; // 模糊像素半径
+        float reach = 1.0 + strength * 2.0;
+        // 水平 7-tap（偏移按纹素尺寸）
         vec4 sumH = vec4(0.0);
         float wH = 0.0;
-        for (int i = -2; i <= 2; i++) {
+        for (int i = -3; i <= 3; i++) {
           float fi = float(i);
           float w = exp(-fi * fi / (2.0 * sigma * sigma));
-          sumH += texture2D(tDiffuse, vUv + vec2(fi, 0.0) * pixel * reach) * w;
+          sumH += texture2D(tDiffuse, vUv + vec2(fi * uResolution.x * reach, 0.0)) * w;
           wH += w;
         }
-        // 垂直 5-tap
+        // 垂直 7-tap
         vec4 sumV = vec4(0.0);
         float wV = 0.0;
-        for (int i = -2; i <= 2; i++) {
+        for (int i = -3; i <= 3; i++) {
           float fi = float(i);
           float w = exp(-fi * fi / (2.0 * sigma * sigma));
-          sumV += texture2D(tDiffuse, vUv + vec2(0.0, fi) * pixel * reach) * w;
+          sumV += texture2D(tDiffuse, vUv + vec2(0.0, fi * uResolution.y * reach)) * w;
           wV += w;
         }
         tex = (sumH / wH + sumV / wV) * 0.5;
@@ -102,6 +100,8 @@ export class VisibilityBlur {
     scene: THREE.Scene,
     camera: THREE.PerspectiveCamera,
   ) {
+    this.rendererDomWidth = _renderer.domElement.width || 1;
+    this.rendererDomHeight = _renderer.domElement.height || 1;
     this.composer = new EffectComposer(_renderer);
     this.composer.addPass(new RenderPass(scene, camera));
     this.pass = new ShaderPass(VisibilityShader as never);
@@ -132,7 +132,14 @@ export class VisibilityBlur {
     this.pass.uniforms['uBlur'].value = this.blur;
     this.pass.uniforms['uOverlay'].value = Math.max(0, Math.min(1, overlayOpacity));
     this.pass.uniforms['uVisM'].value = Math.max(0.2, visM);
+    // 纹素尺寸（UV 偏移单位）
+    const w = this.rendererDomWidth || 1;
+    const h = this.rendererDomHeight || 1;
+    (this.pass.uniforms['uResolution'].value as THREE.Vector2).set(1 / w, 1 / h);
   }
+
+  private rendererDomWidth = 1;
+  private rendererDomHeight = 1;
 
   get active(): boolean {
     return this.blur > 0.002;
@@ -145,7 +152,11 @@ export class VisibilityBlur {
 
   setSize(w: number, h: number): void {
     this.composer?.setSize(w, h);
-    this.depthTex = null; // 尺寸变化后重建
+    this.rendererDomWidth = w;
+    this.rendererDomHeight = h;
+    // 尺寸变化后重建（先释放旧深度纹理）
+    this.depthTex?.dispose();
+    this.depthTex = null;
     this.ensureDepthTexture();
   }
 
